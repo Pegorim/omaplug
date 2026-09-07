@@ -10,6 +10,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime
 
@@ -269,13 +270,44 @@ def collect(db, plugins, now=None):
                         for key in ("packages", "plugins", "history")}, "errors": errors}
 
 
+def state_root():
+    return Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state")
+
+
+def migrate_state(destination):
+    """Copy pre-1.0.1 history once, preserving the original for recovery."""
+    legacy = state_root() / "omaplug/history.sqlite3"
+    if destination.exists() or not legacy.exists():
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with tempfile.TemporaryDirectory(prefix=".migration-", dir=destination.parent) as temporary:
+        snapshot = Path(temporary) / "history.sqlite3"
+        source = sqlite3.connect(legacy.resolve().as_uri() + "?mode=ro", uri=True)
+        target = sqlite3.connect(snapshot)
+        try:
+            source.backup(target)
+            if target.execute("PRAGMA quick_check").fetchall() != [("ok",)]:
+                raise sqlite3.DatabaseError("Legacy history failed its integrity check")
+        finally:
+            target.close()
+            source.close()
+        snapshot.chmod(0o600)
+        try:
+            os.link(snapshot, destination)
+        except FileExistsError:
+            pass  # Another collector completed migration first.
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--state-dir", type=Path, default=Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "omaplug")
+    default_state = state_root() / "omarchy/omaplug"
+    parser.add_argument("--state-dir", type=Path, default=default_state)
     args = parser.parse_args()
     os.umask(0o077)
     try:
         payload = json.loads(sys.stdin.readline())
+        if args.state_dir == default_state:
+            migrate_state(args.state_dir / "history.sqlite3")
         with connect(args.state_dir / "history.sqlite3") as db:
             print(json.dumps(collect(db, payload.get("plugins")), separators=(",", ":")))
     except (OSError, ValueError, sqlite3.DatabaseError) as error:

@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -18,6 +19,72 @@ Installed Size  : 20.00 MiB
 Install Date    : Mon Sep  7 09:10:00 2026
 Install Reason  : Explicitly installed
 """
+
+
+class StateMigrationTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        environment = patch.dict(os.environ, {"XDG_STATE_HOME": str(self.root)})
+        environment.start()
+        self.addCleanup(environment.stop)
+        self.legacy = self.root / "omaplug/history.sqlite3"
+        self.destination = self.root / "omarchy/omaplug/history.sqlite3"
+
+    def test_state_root_honors_xdg_and_empty_fallback(self):
+        self.assertEqual(monitor.state_root(), self.root)
+        with patch.dict(os.environ, {"XDG_STATE_HOME": ""}):
+            self.assertEqual(monitor.state_root(), Path.home() / ".local/state")
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(monitor.state_root(), Path.home() / ".local/state")
+
+    def seed_legacy(self):
+        db = monitor.connect(self.legacy)
+        try:
+            monitor.put(db, "baselineAt", 123)
+            db.execute("INSERT INTO events VALUES (?, ?, ?)", ("saved", 123, '{"id":"saved"}'))
+            db.commit()
+        finally:
+            db.close()
+
+    def test_migration_preserves_baseline_events_and_original(self):
+        self.seed_legacy()
+        original = self.legacy.read_bytes()
+        monitor.migrate_state(self.destination)
+        db = monitor.connect(self.destination)
+        try:
+            self.assertEqual(monitor.get(db, "baselineAt"), 123)
+            self.assertEqual(db.execute("SELECT id FROM events").fetchall(), [("saved",)])
+        finally:
+            db.close()
+        self.assertEqual(self.legacy.read_bytes(), original)
+        self.assertEqual(self.destination.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(list(self.destination.parent.iterdir()), [self.destination])
+
+    def test_existing_destination_is_never_replaced(self):
+        self.seed_legacy()
+        db = monitor.connect(self.destination)
+        monitor.put(db, "baselineAt", 456)
+        db.commit()
+        db.close()
+        original = self.destination.read_bytes()
+        monitor.migrate_state(self.destination)
+        self.assertEqual(self.destination.read_bytes(), original)
+
+    def test_corrupt_legacy_is_preserved_without_partial_destination(self):
+        self.legacy.parent.mkdir()
+        self.legacy.write_bytes(b"not a sqlite database")
+        with self.assertRaises(sqlite3.DatabaseError):
+            monitor.migrate_state(self.destination)
+        self.assertFalse(self.destination.exists())
+        self.assertEqual(self.legacy.read_bytes(), b"not a sqlite database")
+        self.assertEqual(list(self.destination.parent.iterdir()), [])
+
+    def test_fresh_install_needs_no_migration(self):
+        monitor.migrate_state(self.destination)
+        self.assertFalse(self.destination.exists())
+        self.assertFalse(self.legacy.parent.exists())
 
 
 class MonitorTests(unittest.TestCase):

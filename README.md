@@ -2,7 +2,7 @@
 
 A native Omarchy panel for installed packages, shell plugins, and recent changes. Click the package icon in the bar to open it. Everything stays on your computer.
 
-This repository contains the current **1.0.0** community plugin, including its tests, screenshots, and known limitations. It is not an official Omarchy component or an accepted upstream contribution.
+This repository contains the current **1.0.1** community plugin, including its tests, screenshots, and known limitations. It is not an official Omarchy component or an accepted upstream contribution.
 
 ![Omaplug package inventory](screenshots/packages-dark.png)
 
@@ -50,7 +50,9 @@ Source failures retain previous results and display a stale notice. Corrupt SQLi
 
 ## State and diagnostics
 
-State is stored at `${XDG_STATE_HOME:-~/.local/state}/omaplug/history.sqlite3`, outside the checkout, with private file permissions. There is no separate daemon or system service. All monitors share one shell service.
+State is stored in Omarchy's state directory at `${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/omaplug/history.sqlite3`, with private file permissions. Bar placement and enabled status use Omarchy's existing `~/.config/omarchy/shell.json`. There is no separate daemon or system service. All monitors share one shell service.
+
+Version 1.0.1 automatically copies existing history from the former `omaplug/history.sqlite3` location under the state root on first use. The original remains as an inactive recovery copy; an existing database at the new location is never overwritten. New installations write only inside Omarchy's directories.
 
 ```bash
 omarchy-shell omaplug-monitor status
@@ -80,16 +82,15 @@ This removes the downloaded plugin checkout. Omaplug's history remains in its se
 ```bash
 python3 -m unittest discover -s tests -v
 node tests/test_model.cjs
-bash -n install.sh
 ```
 
 Node is only used for the model tests, not at runtime. The tests cover package parsing, transaction grouping, partial lines, rotation, repeated timestamps, replay deduplication, plugin baselines and changes, uncertain scans, source failures, database locking, state preservation, and filtering 10,000 packages.
 
-The optional maintainer utility `install.sh` uses Omarchy's existing jq dependency. It is not part of the standard installation command above.
+Installation and updates use Omarchy's native plugin manager. There is no custom installer or required development checkout location.
 
 `tests/Preview.qml` is an isolated Quickshell preview using a supplied snapshot. It supports light-palette, tab, and size/position checks without touching desktop theme settings. Run `python3 tests/preview.py` after the installed monitor has collected its first snapshot. Preview IPC is scoped to its temporary config; it is not loaded by the installed plugin.
 
-**Source reload limitation:** discovery through the project symlink works. On the tested shell, a plugin rescan sometimes retained compiled QML from before an edit. Use `omarchy restart shell` after editing source if the panel does not update. Python helper changes take effect on the next observation. History survives shell restarts.
+**Source reload limitation:** on the tested shell, a plugin rescan sometimes retained compiled QML from before an edit. Use `omarchy restart shell` after editing source if the panel does not update. Python helper changes take effect on the next observation. History survives shell restarts.
 
 Visual checks covered the native dark palette, an isolated light palette, the three tabs, expanded history, keyboard search, and a narrow panel. See [VALIDATION.md](VALIDATION.md) for the precise results and remaining limitations.
 

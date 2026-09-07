@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "mateus.omaplug",
   "name": "Omaplug",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Mateus",
   "license": "MIT",
   "description": "Installed packages, shell plugins, and what changed on your Omarchy desktop.",

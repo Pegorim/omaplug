@@ -9,7 +9,7 @@ import tempfile
 
 project = Path(__file__).resolve().parents[1]
 shell = Path(os.environ.get("OMARCHY_PATH", "/usr/share/omarchy")) / "shell"
-state = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "omaplug/history.sqlite3"
+state = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state") / "omarchy/omaplug/history.sqlite3"
 
 with sqlite3.connect(state.as_uri() + "?mode=ro", uri=True) as db:
     values = {key: json.loads(value) for key, value in db.execute("SELECT key,value FROM state")}
