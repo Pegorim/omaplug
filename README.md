@@ -9,7 +9,17 @@ This repository contains the current **1.0.0** community plugin, including its t
 
 ## Install
 
-Clone the repository, then run the included installer:
+Install through Omarchy's plugin manager:
+
+```bash
+omarchy plugin add https://github.com/Pegorim/omaplug.git --enable
+```
+
+Omarchy presents its normal review and confirmation prompts, validates the manifest, and installs the plugin under `~/.config/omarchy/plugins/mateus.omaplug`. No custom install script is required for this method.
+
+### Development checkout
+
+To keep the source in a separate working directory instead, clone the repository and run the included symlink installer:
 
 ```bash
 mkdir -p ~/Work/omarchy-plugs
@@ -69,7 +79,13 @@ To disable the monitor:
 omarchy plugin disable mateus.omaplug
 ```
 
-To remove the registration afterward, unlink `~/.config/omarchy/plugins/mateus.omaplug`, then run `omarchy-shell shell rescanPlugins`. The project and its history remain available. Delete either separately only if no longer needed.
+To remove the plugin through Omarchy's normal confirmation flow:
+
+```bash
+omarchy plugin remove mateus.omaplug
+```
+
+For a standard installation, this removes the downloaded plugin checkout. For the development symlink installation, it removes only the link and preserves the working directory. Omaplug's history remains in its separate state directory in either case.
 
 ## Development and checks
 
