@@ -1,5 +1,4 @@
 # Omaplug validation
-`~/Work/omarchy-plugs/omaplug/VALIDATION.md`
 
 Verified locally on September 7, 2026. This records the checks actually performed, not a guarantee of upstream compatibility.
 

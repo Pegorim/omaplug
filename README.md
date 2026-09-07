@@ -1,5 +1,4 @@
 # Omaplug
-`~/Work/omarchy-plugs/omaplug/README.md`
 
 A native Omarchy panel for installed packages, shell plugins, and recent changes. Click the package icon in the bar to open it. Everything stays on your computer.
 
@@ -15,26 +14,15 @@ Install through Omarchy's plugin manager:
 omarchy plugin add https://github.com/Pegorim/omaplug.git --enable
 ```
 
-Omarchy presents its normal review and confirmation prompts, validates the manifest, and installs the plugin under `~/.config/omarchy/plugins/mateus.omaplug`. No custom install script is required for this method.
+Omarchy presents its normal review and confirmation prompts, validates the manifest, and downloads the plugin directly into the regular plugin directory:
 
-### Development checkout
-
-To keep the source in a separate working directory instead, clone the repository and run the included symlink installer:
-
-```bash
-mkdir -p ~/Work/omarchy-plugs
-git clone https://github.com/Pegorim/omaplug.git ~/Work/omarchy-plugs/omaplug
-cd ~/Work/omarchy-plugs/omaplug
-bash install.sh
+```text
+~/.config/omarchy/plugins/mateus.omaplug/
 ```
 
-The checkout can live elsewhere; the installer links its actual location into `~/.config/omarchy/plugins/mateus.omaplug`. The original development installation remains at `/home/mateus/Work/omarchy-plugs/omaplug`.
+The `--enable` option adds Omaplug to your bar. Click its package icon to open the panel.
 
-If you already have this checkout, run `bash install.sh` from its directory instead of cloning it again.
-
-The installer leaves an existing, different installation untouched. It preserves an already-enabled widget's position. On first enable it places Omaplug after the update indicator, or in the center section when that indicator is absent. No root access or package installation is needed.
-
-Verified with Omarchy **4.0.2-1**, Quickshell **0.3.1-1**, Python **3.14.7**, and the native Omarchy shell components on this machine. Older Waybar-based installations are not supported. Omaplug uses Python's standard library, pacman, pacman-conf, and Git for local plugin revisions. The installer also uses Omarchy's existing jq dependency.
+Verified with Omarchy **4.0.2-1**, Quickshell **0.3.1-1**, Python **3.14.7**, and the native Omarchy shell components on the test machine. Older Waybar-based installations are not supported. Omaplug uses Python's standard library, pacman, pacman-conf, and Git for local plugin revisions.
 
 ## Browse your software
 
@@ -85,7 +73,7 @@ To remove the plugin through Omarchy's normal confirmation flow:
 omarchy plugin remove mateus.omaplug
 ```
 
-For a standard installation, this removes the downloaded plugin checkout. For the development symlink installation, it removes only the link and preserves the working directory. Omaplug's history remains in its separate state directory in either case.
+This removes the downloaded plugin checkout. Omaplug's history remains in its separate state directory.
 
 ## Development and checks
 
@@ -96,6 +84,8 @@ bash -n install.sh
 ```
 
 Node is only used for the model tests, not at runtime. The tests cover package parsing, transaction grouping, partial lines, rotation, repeated timestamps, replay deduplication, plugin baselines and changes, uncertain scans, source failures, database locking, state preservation, and filtering 10,000 packages.
+
+The optional maintainer utility `install.sh` uses Omarchy's existing jq dependency. It is not part of the standard installation command above.
 
 `tests/Preview.qml` is an isolated Quickshell preview using a supplied snapshot. It supports light-palette, tab, and size/position checks without touching desktop theme settings. Run `python3 tests/preview.py` after the installed monitor has collected its first snapshot. Preview IPC is scoped to its temporary config; it is not loaded by the installed plugin.
 

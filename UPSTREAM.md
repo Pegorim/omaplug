@@ -1,5 +1,4 @@
 # Proposal: make installed software visible in Omarchy
-`~/Work/omarchy-plugs/omaplug/UPSTREAM.md`
 
 Omarchy can install packages and shell plugins, but answering “what is installed, and what changed?” still takes several commands. Omaplug brings those answers into a single native bar panel.
 
