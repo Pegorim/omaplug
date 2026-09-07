@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "mateus.omaplug",
+  "name": "Omaplug",
+  "version": "1.0.0",
+  "author": "Mateus",
+  "license": "MIT",
+  "description": "Installed packages, shell plugins, and what changed on your Omarchy desktop.",
+  "kinds": ["service", "bar-widget"],
+  "entryPoints": {"service": "Service.qml", "barWidget": "Panel.qml"},
+  "barWidget": {
+    "displayName": "Omaplug",
+    "description": "Browse installed software and its history.",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "center"
+  }
+}

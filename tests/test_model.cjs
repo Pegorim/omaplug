@@ -1,0 +1,18 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const model = {};
+vm.createContext(model);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../Model.js'), 'utf8'), model);
+const packages = Array.from({length: 10000}, (_, i) => ({name: `package-${i}`, version: '1.0', description: 'Utility', explicit: i % 2 === 0, origin: i % 4 === 0 ? 'Foreign' : 'Repository'}));
+const snapshot = {packages, plugins: [{name: 'Clock', enabled: true, firstParty: true}, {name: 'Notes', enabled: false, firstParty: false}]};
+assert.equal(model.rows(snapshot, 'packages', 'All', '').length, 10000);
+assert.equal(model.rows(snapshot, 'packages', 'Explicit', '').length, 5000);
+assert.equal(model.rows(snapshot, 'packages', 'Foreign', '').length, 2500);
+assert.equal(model.rows(snapshot, 'packages', 'Dependencies', 'PACKAGE-9999').length, 1);
+assert.equal(model.rows(snapshot, 'plugins', 'Disabled', '').length, 1);
+assert.equal(model.rows(snapshot, 'plugins', 'User', 'Notes').length, 1);
+assert.equal(model.rows(snapshot, 'packages', 'All', 'no-such-package').length, 0);
+assert.match(model.changeText({name:'example',action:'upgraded',old:'1',new:'2'}), /1 → 2/);
+console.log('Model filters and 10,000-package search passed');
