@@ -4,6 +4,12 @@ Verified locally on September 7, 2026. This records the checks actually performe
 
 ## Automated and data checks
 
+- Confirmation update: 34 Python tests passed. No and Escape never invoke removal; Yes revalidates eligibility before invoking the native command. A harmless terminal preview visually verified Omarchy's themed Gum Yes/No prompt with No selected by default. No software was removed.
+
+- Removal controls: 31 Python tests passed, including critical dependency providers, wrapped pacman metadata, action-time protection, identifier validation, native confirmation flags, bundled plugin protection, and preservation of locally modified plugin repositories. No real package or plugin was removed during testing.
+
+- September 9 compatibility fix: all 24 Python tests and the JavaScript model checks passed. Omarchy's native validator passed. After reloading the corrected service, it reported 1,501 packages, 45 plugins, and 226 history entries with no source errors. Collection uses native commands instead of the removed registry `inBar` method.
+
 - 21 Python tests passed, including state recovery, partial log lines, rotation, same-second transactions, plugin revisions, baseline handling, and uncertain registry snapshots. Five storage tests cover XDG defaults, legacy history migration, private permissions, existing-destination preservation, corrupt legacy state, and fresh installations.
 - Omarchy's native plugin validator passed for version 1.0.1. Runtime history now defaults to `~/.local/state/omarchy/omaplug/history.sqlite3` and honors `XDG_STATE_HOME`.
 - JavaScript model checks passed with 10,000 packages, including combined search/filter behavior and empty results.

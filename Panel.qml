@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
+import Quickshell
 import qs.Commons
 import qs.Ui
 import "Model.js" as Model
@@ -24,6 +25,12 @@ Panel {
     : monitor.error || (snapshot.errors || []).map(function(e) { return e.message }).join("\n")
 
   function selectTab(value) { tab = value; filter = "All"; search.text = ""; expandedId = ""; list.currentIndex = 0 }
+  function removeItem(item) {
+    if (item.removalBlock === undefined || item.removalBlock) return
+    var helper = decodeURIComponent(Qt.resolvedUrl("scripts/remove.py").toString().replace(/^file:\/\//, ""))
+    Quickshell.execDetached(["omarchy", "launch", "terminal", "python3", helper, tab, item.id])
+    root.close()
+  }
   function refreshRows() {
     if (!search || !list) return
     var next = Model.rows(snapshot, tab, filter, search.text)
@@ -221,6 +228,7 @@ Panel {
 
           Column {
             id: contents
+            z: 1
             x: Style.space(10)
             y: Style.space(10)
             width: parent.width - Style.space(20)
@@ -238,6 +246,13 @@ Panel {
                 font.pixelSize: Style.font.body
                 font.bold: true
                 elide: Text.ElideRight
+              }
+              Text {
+                visible: !entry.expanded && root.tab !== "history" && entry.modelData.removalBlock === ""
+                text: "Expand to remove"
+                color: root.muted
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
               }
               Text {
                 Layout.maximumWidth: contents.width * 0.38
@@ -277,6 +292,35 @@ Panel {
               font.pixelSize: Style.font.bodySmall
               wrapMode: Text.Wrap
               topPadding: Style.space(8)
+            }
+            Text {
+              width: parent.width
+              visible: root.tab !== "history" && text !== ""
+              text: [entry.modelData.critical ? "Critical" : "",
+                entry.modelData.bundled ? "Bundled with Omarchy" : root.tab === "plugins" ? "User installed" : ""].filter(Boolean).join(" · ")
+              color: root.muted
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              wrapMode: Text.Wrap
+            }
+            Text {
+              width: parent.width
+              visible: entry.expanded && root.tab !== "history"
+              text: entry.modelData.removalBlock === undefined ? "Refresh inventory to check removal eligibility."
+                : entry.modelData.removalBlock || "Opens a terminal for review and confirmation."
+              color: root.muted
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              wrapMode: Text.Wrap
+            }
+            Button {
+              visible: entry.expanded && root.tab !== "history"
+              text: entry.modelData.removalBlock ? "Protected" : "Remove…"
+              enabled: entry.modelData.removalBlock !== undefined && !entry.modelData.removalBlock
+              foreground: root.foreground
+              focusable: true
+              bordered: true
+              onClicked: root.removeItem(entry.modelData)
             }
           }
           MouseArea {

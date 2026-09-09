@@ -98,6 +98,34 @@ class MonitorTests(unittest.TestCase):
     def events(self):
         return [json.loads(row[0]) for row in self.db.execute("SELECT data FROM events ORDER BY at")]
 
+    def test_native_plugin_inventory_joins_manifest_and_enabled_status(self):
+        manifest = self.root / "manifest.json"
+        manifest.write_text(json.dumps({"id": "test.example", "version": "2.0", "description": "Example"}))
+        installed = [{"id": "test.example", "name": "Example", "enabled": False, "kinds": ["bar-widget"], "firstParty": False}]
+        catalog = [{"id": "test.example", "manifestPath": str(manifest), "sourceDir": str(self.root)}]
+        with patch.object(monitor, "run", side_effect=[json.dumps(installed), json.dumps(catalog)]):
+            rows = monitor.read_plugins()
+        self.assertEqual(rows[0]["version"], "2.0")
+        self.assertEqual(rows[0]["path"], str(self.root))
+        self.assertFalse(rows[0]["enabled"])
+
+    def test_native_plugin_inventory_rejects_disagreeing_catalog(self):
+        installed = [{"id": "test.example", "name": "Example", "enabled": True, "kinds": []}]
+        with patch.object(monitor, "run", side_effect=[json.dumps(installed), "[]"]):
+            with self.assertRaisesRegex(ValueError, "disagree"):
+                monitor.read_plugins()
+
+    def test_native_plugin_failure_does_not_block_package_collection(self):
+        monitor.put(self.db, "plugins", [self.plugin()])
+        self.db.commit()
+        def packages(db, path):
+            monitor.put(db, "packages", [{"name": "example"}])
+        with patch.object(monitor, "read_plugins", side_effect=RuntimeError("Shell unavailable")), patch.object(monitor, "run", return_value=str(self.root)), patch.object(monitor, "collect_packages", side_effect=packages), patch.object(monitor, "collect_log"):
+            snapshot = monitor.collect(self.db, None, now=100)
+        self.assertEqual(snapshot["packages"], [{"name": "example"}])
+        self.assertEqual(snapshot["plugins"], [self.plugin()])
+        self.assertEqual(snapshot["errors"], [{"source": "plugins", "message": "Shell unavailable"}])
+
     def line(self, text, second=0):
         return f"[2026-09-07T09:10:{second:02d}-0300] [ALPM] {text}\n"
 
@@ -212,6 +240,7 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(errors[0]["source"], "packages")
 
     def test_unchanged_package_database_skips_pacman_query(self):
+        monitor.put(self.db, "packageSafetyVersion", 1)
         (self.root / "local").mkdir()
         monitor.put(self.db, "packageSignature", monitor.signature(self.root))
         with patch.object(monitor, "run") as runner:

@@ -13,19 +13,7 @@ Item {
   readonly property string helperPath: decodeURIComponent(Qt.resolvedUrl("scripts/monitor.py").toString().replace(/^file:\/\//, ""))
 
   function refresh() {
-    if (collector.running || !pluginRegistry || pluginRegistry.scanning) return
-    var installed = pluginRegistry.installedPlugins
-    var entries = []
-    for (var id in installed) {
-      var item = installed[id]
-      var widget = item.kinds.indexOf("bar-widget") !== -1
-      entries.push({ id: id, name: item.name, version: item.version,
-        description: item.description || "", kinds: item.kinds,
-        firstParty: !!item.__isFirstParty, path: item.__sourceDir,
-        enabled: widget ? pluginRegistry.inBar(id) : pluginRegistry.isEnabled(id) })
-    }
-    if (!entries.length) return
-    collector.payload = JSON.stringify({ plugins: entries })
+    if (collector.running) return
     timedOut = false
     collector.running = true
     watchdog.restart()
@@ -34,6 +22,7 @@ Item {
   onPluginRegistryChanged: debounce.restart()
   Connections {
     target: root.pluginRegistry
+    ignoreUnknownSignals: true
     function onPluginsChanged() { debounce.restart() }
     function onScanFinished() { debounce.restart() }
   }
@@ -50,10 +39,9 @@ Item {
   }
   Process {
     id: collector
-    property string payload: ""
     command: ["python3", root.helperPath]
     stdinEnabled: true
-    onStarted: write(payload + "\n")
+    onStarted: write("{}\n")
     stdout: StdioCollector { id: output; waitForEnd: true }
     stderr: StdioCollector { id: errors; waitForEnd: true }
     onExited: function(exitCode) {

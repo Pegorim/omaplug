@@ -58,10 +58,14 @@ def parse_packages(text, foreign):
     packages = []
     for block in text.strip().split("\n\n"):
         fields = {}
+        field = None
         for line in block.splitlines():
             match = re.match(r"^(\S[^:]*?)\s+: (.*)$", line)
             if match:
-                fields[match[1].strip()] = match[2].strip()
+                field = match[1].strip()
+                fields[field] = match[2].strip()
+            elif line[:1].isspace() and field:
+                fields[field] += " " + line.strip()
         if not fields.get("Name") or not fields.get("Version"):
             raise ValueError("Incomplete pacman package information")
         packages.append({"id": fields["Name"], "name": fields["Name"],
@@ -71,6 +75,8 @@ def parse_packages(text, foreign):
                          "origin": "Foreign" if fields["Name"] in foreign else "Repository",
                          "installedAt": fields.get("Install Date", "Unknown"),
                          "architecture": fields.get("Architecture", "")})
+        packages[-1].update({key: [] if fields.get(field, "None") == "None" else fields.get(field, "").split()
+                             for key, field in (("depends", "Depends On"), ("provides", "Provides"), ("requiredBy", "Required By"))})
     return sorted(packages, key=lambda item: item["name"].lower())
 
 
@@ -82,18 +88,57 @@ def signature(dbpath):
     return digest([(str(p), p.stat().st_mtime_ns, p.stat().st_size) for p in paths])
 
 
+def package_safety(packages):
+    omarchy = Path(os.environ.get("OMARCHY_PATH") or "/usr/share/omarchy")
+    bundled = {"base", "omarchy", "omarchy-settings", "omarchy-keyring"}
+    for line in (omarchy / "install/omarchy-base.packages").read_text().splitlines():
+        name = line.split("#", 1)[0].strip()
+        if name:
+            bundled.add(name)
+    # Optional ISO packages are not necessarily bundled applications.
+    critical = {"base", "omarchy", "omarchy-dev", "omarchy-settings", "pacman", "sudo", "systemd",
+                "linux", "linux-lts", "linux-zen", "linux-hardened", "linux-firmware", "mkinitcpio",
+                "limine", "grub", "efibootmgr", "networkmanager", "iwd", "cryptsetup", "lvm2",
+                "btrfs-progs", "e2fsprogs", "xfsprogs", "hyprland", "quickshell", "python"}
+    for path in Path("/usr/lib/modules").glob("*/pkgbase"):
+        critical.add(path.read_text().strip())
+    providers = {}
+    for item in packages:
+        for name in [item["name"]] + item.get("provides", []):
+            providers.setdefault(re.split(r"[<>=]", name)[0], set()).add(item["name"])
+    by_name = {item["name"]: item for item in packages}
+    pending = list(critical)
+    while pending:
+        name = pending.pop()
+        for dependency in by_name.get(name, {}).get("depends", []):
+            for provider in providers.get(re.split(r"[<>=]", dependency)[0], set()):
+                if provider not in critical:
+                    critical.add(provider)
+                    pending.append(provider)
+    for item in packages:
+        item["bundled"] = item["name"] in bundled
+        item["critical"] = item["name"] in critical
+        item["removalBlock"] = ("Critical system component or dependency" if item["critical"] else
+                                "Required by: " + ", ".join(item["requiredBy"]) if item.get("requiredBy") else "")
+
+
 def collect_packages(db, dbpath):
     if (dbpath / "db.lck").exists():
         raise RuntimeError("Package transaction in progress; showing the last inventory")
     stamp = signature(dbpath)
-    if get(db, "packageSignature") == stamp:
+    if get(db, "packageSignature") == stamp and get(db, "packageSafetyVersion") == 1:
+        packages = get(db, "packages", [])
+        package_safety(packages)
+        put(db, "packages", packages)
         return
     foreign = set(run(["pacman", "-Qmq"], empty_ok=True).splitlines())
     packages = parse_packages(run(["pacman", "-Qi"]), foreign)
+    package_safety(packages)
     if stamp != signature(dbpath) or (dbpath / "db.lck").exists():
         raise RuntimeError("Package database changed during collection; retrying next refresh")
     put(db, "packages", packages)
     put(db, "packageSignature", stamp)
+    put(db, "packageSafetyVersion", 1)
 
 
 LOG = re.compile(r"^\[([^]]+)\] \[ALPM\] (.*)$")
@@ -173,6 +218,29 @@ def collect_log(db, path):
         put(db, "logNotice", "Package log rotated or was replaced. Previously recorded history is retained; gaps may remain.")
 
 
+def read_plugins():
+    installed = json.loads(run(["omarchy", "plugin", "list", "--json"]))
+    catalog = json.loads(run(["omarchy-plugin-catalog"]))
+    if not isinstance(installed, list) or not isinstance(catalog, list):
+        raise ValueError("Invalid Omarchy plugin inventory")
+    if any(not isinstance(item, dict) or not all(key in item for key in ("id", "manifestPath", "sourceDir")) for item in catalog):
+        raise ValueError("Incomplete Omarchy plugin catalog")
+    if any(not isinstance(item, dict) or not all(key in item for key in ("id", "name", "enabled", "kinds")) for item in installed):
+        raise ValueError("Incomplete Omarchy plugin list")
+    manifests = {item["id"]: item for item in catalog}
+    result = []
+    for item in installed:
+        entry = manifests.get(item["id"])
+        if entry is None:
+            raise ValueError("Plugin catalog and shell registry disagree. Waiting for a valid scan.")
+        manifest = json.loads(Path(entry["manifestPath"]).read_text())
+        if not isinstance(manifest, dict) or manifest.get("id") != item["id"]:
+            raise ValueError("Plugin manifest changed during collection")
+        result.append({**item, "version": manifest.get("version", ""),
+                       "description": manifest.get("description", ""), "path": entry["sourceDir"]})
+    return result
+
+
 def normalize_plugins(items):
     if not isinstance(items, list) or not items:
         raise ValueError("Shell registry is not ready")
@@ -185,6 +253,11 @@ def normalize_plugins(items):
             raise ValueError("Invalid shell registry snapshot")
         seen.add(item["id"])
         entry = dict(item)
+        entry["bundled"] = bool(entry.get("firstParty"))
+        entry["critical"] = entry.get("canDisable") is False
+        entry["removalBlock"] = ("Bundled with Omarchy; cannot be removed here" if entry["bundled"] else
+                                 "Required by the shell" if entry["critical"] else
+                                 "Omaplug cannot remove itself" if entry["id"] == "mateus.omaplug" else "")
         entry["revision"] = ""
         if not entry.get("firstParty") and (Path(entry["path"]) / ".git").exists():
             entry["revision"] = run(["git", "-C", entry["path"], "rev-parse", "--verify", "--quiet", "HEAD"], empty_ok=True).strip()
@@ -253,7 +326,7 @@ def collect(db, plugins, now=None):
             collect_log(db, Path(run(["pacman-conf", "LogFile"]).strip()))
         source(db, "packages", packages, now, errors)
         source(db, "history", history, now, errors)
-        source(db, "plugins", lambda: collect_plugins(db, plugins, now), now, errors)
+        source(db, "plugins", lambda: collect_plugins(db, read_plugins() if plugins is None else plugins, now), now, errors)
         put(db, "lastObservedAt", now)
         db.commit()
     except BaseException:
