@@ -7,12 +7,28 @@ import "plugin" as Omaplug
 // Isolated visual harness. No real shell services or desktop theme changes.
 ShellRoot {
   id: harness
+  function findControl(item, name) {
+    if (item.objectName === name) return item
+    var children = item.children || item.contentItem || []
+    for (var i = 0; i < children.length; i++) {
+      var found = findControl(children[i], name)
+      if (found) return found
+    }
+    return null
+  }
   FileView { id: data; path: Qt.resolvedUrl("snapshot.json"); blockLoading: true }
   FileView { id: catalog; path: Qt.resolvedUrl("catalog.json"); blockLoading: true }
   Item {
     id: monitor
     property var snapshot: JSON.parse(data.text())
     property string error: ""
+    property string pendingPlugin: ""
+    property string actionError: ""
+    function setPluginEnabled(item, enabled) {
+      var next = Object.assign({}, snapshot)
+      next.plugins = snapshot.plugins.map(function(p) { return p.id === item.id ? Object.assign({}, p, {enabled: enabled}) : p })
+      snapshot = next
+    }
     property bool refreshing: false
     property var marketplace: JSON.parse(catalog.text())
     property string marketplaceError: ""
@@ -87,6 +103,24 @@ ShellRoot {
           rows: preview.visibleRows.length, tab: preview.tab })
       }
       return "{}"
+    }
+    function focusToggle(id: string): bool {
+      for (var i = 0; i < preview.data.length; i++) {
+        var found = harness.findControl(preview.data[i], "toggle-" + id)
+        if (found) { found.forceActiveFocus(); return true }
+      }
+      return false
+    }
+    function enabled(id: string): string {
+      return JSON.stringify(monitor.snapshot.plugins.filter(function(p) { return p.id === id }).map(function(p) { return p.enabled }))
+    }
+    function dark(): void {
+      Color.foreground = "#c0caf5"
+      Color.background = "#1a1b26"
+      Color.accent = "#7aa2f7"
+      Color.urgent = "#f7768e"
+      Style.styleOverrides = ({})
+      Color.shellValues = ({"popups.background": "#1a1b26", "popups.text": "#c0caf5", "popups.border": "#7aa2f7"})
     }
     function light(): void {
       Color.foreground = "#343b58"

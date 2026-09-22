@@ -26,3 +26,12 @@ assert.equal(model.rows({discover:discovered},'discover','Installed','')[0].id,'
 assert.equal(model.rows({discover:discovered},'discover','Verified','')[0].id,'installed');
 assert.equal(model.rows({discover:discovered},'discover','All','manual').length,1);
 console.log('Discover installed matching and filters passed');
+const grouped = model.installedPlugins([{id:'sys',name:'Alpha',firstParty:true},{id:'mine',name:'Zulu',firstParty:false}]);
+assert.equal(grouped[0].id,'mine');
+assert.equal(grouped[0].group,'Your plugins');
+assert.equal(model.rows({plugins:[{enabled:true}]},'plugins','On','').length,1);
+assert.equal(model.rows({plugins:[{enabled:false}]},'plugins','Off','').length,1);
+assert.notEqual(model.toggleBlock({id:'mateus.omaplug',canDisable:true}), '');
+assert.notEqual(model.toggleBlock({id:'bar',canDisable:true,kinds:['bar']}), '');
+assert.equal(model.toggleBlock({id:'mine',canDisable:true,kinds:['service']}), '');
+console.log('Plugin grouping and toggle eligibility passed');

@@ -56,3 +56,12 @@ No upstream development-branch integration or submission was performed. Publicat
 - Verified search and filter preservation through the live preview IPC: Plugins + `audio` + Enabled returned the same one result after visiting History. Exercised Ctrl+H in the real isolated panel and confirmed History → Plugins through IPC.
 - Inspected full-size Plugins and a 500 × 600 Discover layout. No clipped navigation or filters were observed. Captured `screenshots/plugins-redesigned.png`.
 - All 42 Python tests, JavaScript model tests, native manifest validation, and whitespace checks passed. The installed copy was backed up and updated, preserving existing backend behavior. No publication was performed.
+
+## Switch-row UX — September 22, 2026
+
+- Always-visible On/Off switches invoke a separate helper which rechecks eligibility, runs native Omarchy enable/disable, and verifies the resulting registry state. No optimistic success is reported. Required components, replacement bars, and Omaplug itself are protected; pending and failed actions are shown.
+- All 47 Python tests and JavaScript tests passed. Additional coverage exercises protected/missing IDs, native failures, state-confirmation failure, grouping, and On/Off filters. Native plugin validation and whitespace checks passed. Qt lint has the existing dynamic shell metadata/QProcess warnings, with no syntax errors.
+- Real native integration test: created a temporary no-op service plugin, verified Off → On → Off through `set_enabled.py`, then removed the fixture and its configuration entries. Existing plugin states were not changed.
+- UI interaction test: focused the actual switch in an isolated preview and used Space to toggle simulated Market Pulse state off and back on. Verified the model response through IPC. This preview never changed the real Market Pulse plugin.
+- Inspected light and dark previews and a 500 × 600 layout. Saved `screenshots/plugins-ux-light.png` and `screenshots/plugins-ux-dark.png`. Palette overrides were confined to the preview process; desktop theme and font settings were unchanged.
+- Local runtime deployment preserves existing files via a timestamped backup and restarts the shell. GitHub and the marketplace remain unpublished.

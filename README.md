@@ -26,6 +26,10 @@ Verified with Omarchy **4.0.2-1**, Quickshell **0.3.1-1**, Python **3.14.7**, an
 
 ## Browse your software
 
+Plugin rows have always-visible **On/Off switches**. Your plugins appear first, followed by bundled components. Flip a switch directly, or focus it and press Space. Omaplug waits for Omarchy to confirm the change; pending operations show “Saving…” and failures appear in the panel. Required shell components, replacement bars, and Omaplug itself cannot be switched here. Turning a plugin off does not uninstall it.
+
+The interface uses the system sans-serif font, larger name text, two-line descriptions, and softly separated rows. Colors bind to Omarchy's live accent, foreground, background, and error roles, including the active switch and selected navigation. No desktop font or theme settings are changed.
+
 Omaplug opens on **Plugins**. The three main views are **Plugins**, **Discover**, and **Packages**. The compact **H** button at the far right opens History; click it again or press **Ctrl+H** to return. Each view remembers its search, filter, expanded row, and selected position for the current shell session. A single result count sits beside the filters; descriptions stay visible, while technical details and removal actions appear only when expanded.
 
 - **Packages:** search names, descriptions, and versions. Filter by explicit packages, dependencies, or foreign packages. Expand a row for installed size and package metadata.
@@ -119,3 +123,7 @@ Installation and updates use Omarchy's native plugin manager. There is no custom
 Visual checks covered the native dark palette, an isolated light palette, the three tabs, expanded history, keyboard search, and a narrow panel. See [VALIDATION.md](VALIDATION.md) for the precise results and remaining limitations.
 
 The [upstream proposal draft](UPSTREAM.md) records the idea for a future Omarchy contribution. Publishing this standalone repository does not imply an upstream submission, acceptance, or release inclusion.
+
+### UX references
+
+The readable title/subtitle/control hierarchy follows the [GNOME switch-row pattern](https://developer.gnome.org/hig/patterns/containers/boxed-lists.html) and [typography guidance](https://developer.gnome.org/hig/guidelines/typography.html). Omaplug retains a virtualized list for its dynamic inventory, a separate details action, and Omarchy-native state changes.

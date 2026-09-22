@@ -55,8 +55,41 @@ Item {
     }
   }
 
+  property string pendingPlugin: ""
+  property string actionError: ""
+  property bool refreshAgain: false
+  readonly property string togglePath: decodeURIComponent(Qt.resolvedUrl("scripts/set_enabled.py").toString().replace(/^file:\/\//, ""))
+
+  function setPluginEnabled(item, enabled) {
+    if (pendingPlugin || item.canDisable !== true || item.id === "mateus.omaplug") return
+    actionError = ""
+    pendingPlugin = item.id
+    toggleProcess.command = ["python3", togglePath, item.id, enabled ? "on" : "off"]
+    toggleProcess.running = true
+  }
+  Process {
+    id: toggleProcess
+    stdout: StdioCollector { id: toggleOutput; waitForEnd: true }
+    stderr: StdioCollector { id: toggleErrors; waitForEnd: true }
+    onExited: function(exitCode) {
+      if (exitCode !== 0) root.actionError = toggleErrors.text.trim() || "Could not change this plugin. Refresh and try again."
+      else {
+        try {
+          var result = JSON.parse(toggleOutput.text)
+          var next = Object.assign({}, root.snapshot)
+          next.plugins = next.plugins.map(function(p) {
+            return p.id === result.id ? Object.assign({}, p, {enabled: result.enabled}) : p
+          })
+          root.snapshot = next
+        } catch (exception) { root.actionError = "Could not confirm the change. Refresh to check." }
+      }
+      root.pendingPlugin = ""
+      root.refresh()
+    }
+  }
+
   function refresh() {
-    if (collector.running) return
+    if (collector.running) { refreshAgain = true; return }
     timedOut = false
     collector.running = true
     watchdog.restart()
@@ -92,6 +125,12 @@ Item {
       if (root.timedOut) return
       if (exitCode !== 0) {
         root.error = errors.text.trim() || "Refresh failed. Showing the last available information."
+        return
+      }
+      if (root.pendingPlugin) return
+      if (root.refreshAgain) {
+        root.refreshAgain = false
+        Qt.callLater(root.refresh)
         return
       }
       try {

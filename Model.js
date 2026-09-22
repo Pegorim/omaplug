@@ -11,9 +11,9 @@ function rows(snapshot, tab, filter, query) {
       if (filter === "Dependencies") return !item.explicit
       if (filter === "Foreign") return item.origin === "Foreign"
     } else if (tab === "plugins") {
-      if (filter === "Enabled") return item.enabled
-      if (filter === "Disabled") return !item.enabled
-      if (filter === "User") return !item.firstParty
+      if ((filter === "Enabled" || filter === "On")) return item.enabled
+      if ((filter === "Disabled" || filter === "Off")) return !item.enabled
+      if ((filter === "User" || filter === "Yours")) return !item.firstParty
     } else if (tab === "discover") {
       if (filter === "Installable") return item.installable && !item.installed
       if (filter === "Installed") return item.installed
@@ -60,4 +60,17 @@ function details(item, tab) {
     + "\n" + (item.enabled ? "Enabled" : "Disabled") + " · " + (item.firstParty ? "Bundled" : "User installed")
     + "\n" + item.path + "\nInstallation date: unknown"
   return (item.changes || []).map(changeText).join("\n\n")
+}
+
+function installedPlugins(items) {
+  return items.map(function(item) {
+    return Object.assign({}, item, {group: item.firstParty ? "Included with Omarchy" : "Your plugins"})
+  }).sort(function(a, b) {
+    return Number(!!a.firstParty) - Number(!!b.firstParty) || a.name.localeCompare(b.name)
+  })
+}
+function toggleBlock(item) {
+  if (item.id === "mateus.omaplug") return "Omaplug stays on while you manage plugins"
+  if (item.canDisable !== true || (item.kinds || []).indexOf("bar") !== -1) return "Required by the shell"
+  return ""
 }

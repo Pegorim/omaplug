@@ -16,7 +16,10 @@ Panel {
   readonly property var marketplace: monitor ? monitor.marketplace : ({ plugins: [], checkedAt: null })
   readonly property bool busy: monitor && (tab === "discover" ? monitor.loadingMarketplace : monitor.refreshing)
   readonly property color foreground: Color.popups.text
-  readonly property color muted: Qt.alpha(foreground, 0.72)
+  readonly property color muted: Qt.alpha(foreground, 0.78)
+  readonly property string uiFont: "sans-serif"
+  readonly property color accent: Color.accent
+  readonly property color surface: Qt.tint(Color.popups.background, Qt.alpha(foreground, 0.035))
   property string tab: "plugins"
   property string previousTab: "plugins"
   property var viewState: ({})
@@ -26,7 +29,7 @@ Panel {
   property string expandedId: ""
   property var visibleRows: []
   readonly property var filters: tab === "packages" ? ["All", "Explicit", "Dependencies", "Foreign"]
-    : tab === "plugins" ? ["All", "Enabled", "Disabled", "User"]
+    : tab === "plugins" ? ["All", "On", "Off", "Yours"]
     : tab === "discover" ? ["All", "Installable", "Installed", "Verified"] : ["All", "Packages", "Plugins"]
   readonly property string issue: !monitor ? "Connecting to the software monitor…"
     : tab === "discover" ? monitor.marketplaceError : monitor.error || (snapshot.errors || []).map(function(e) { return e.message }).join("\n")
@@ -66,7 +69,8 @@ Panel {
   }
   function refreshRows() {
     if (!search || !list || switchingTab) return
-    var source = tab === "discover" ? { discover: Model.discover(marketplace, snapshot.plugins) } : snapshot
+    var source = tab === "discover" ? { discover: Model.discover(marketplace, snapshot.plugins) }
+      : tab === "plugins" ? {plugins: Model.installedPlugins(snapshot.plugins)} : snapshot
     var next = Model.rows(source, tab, filter, search.text)
     // A freshness-only update must not reset the list or its scroll position.
     if (JSON.stringify(next) !== JSON.stringify(visibleRows)) visibleRows = next
@@ -135,19 +139,20 @@ Panel {
         spacing: Style.space(10)
         Text {
           text: "󰏖"
-          color: root.foreground
-          font.family: Style.font.family
+          color: root.accent
           font.pixelSize: Style.font.icon
+          font.family: Style.font.family
         }
         Text {
           Layout.fillWidth: true
           text: "Omaplug"
           color: root.foreground
-          font.family: Style.font.family
-          font.pixelSize: Style.font.body
+          font.family: root.uiFont
+          font.pixelSize: Style.font.subtitle * 1.3
           font.bold: true
         }
         Button {
+            fontFamily: root.uiFont
           iconText: "󰑐"
           tooltipText: root.tab === "discover" ? "Refresh marketplace" : "Refresh installed software"
           Accessible.name: tooltipText
@@ -164,16 +169,20 @@ Panel {
         Repeater {
           model: ["Plugins", "Discover", "Packages"]
           Button {
+            fontFamily: root.uiFont
             required property string modelData
             Layout.fillWidth: true
             text: modelData
-            foreground: root.foreground
+            foreground: selected ? root.accent : root.foreground
+            background: selected ? Qt.alpha(root.accent, 0.12) : "transparent"
+            color: selected ? Qt.alpha(root.accent, 0.14) : "transparent"
             selected: root.tab === modelData.toLowerCase()
             focusable: true
             onClicked: root.selectTab(modelData.toLowerCase())
           }
         }
         Button {
+            fontFamily: root.uiFont
           text: "H"
           tooltipText: root.tab === "history" ? "Back to " + root.previousTab + " · Ctrl+H" : "History · Ctrl+H"
           Accessible.name: "History"
@@ -188,6 +197,8 @@ Panel {
 
       TextField {
         id: search
+        font.family: root.uiFont
+        font.pixelSize: Style.font.body
         Layout.fillWidth: true
         placeholderText: root.tab === "discover" ? "Search plugins, authors, or tags…" : "Search " + root.tab + "…"
         foreground: root.foreground
@@ -207,12 +218,15 @@ Panel {
           Repeater {
             model: root.filters
             Button {
+            fontFamily: root.uiFont
               required property string modelData
               text: modelData
               fontSize: Style.font.caption
               horizontalPadding: Style.space(8)
               verticalPadding: Style.space(4)
-              foreground: root.foreground
+              foreground: selected ? root.accent : root.foreground
+              background: selected ? Qt.alpha(root.accent, 0.12) : "transparent"
+            color: selected ? Qt.alpha(root.accent, 0.14) : "transparent"
               selected: root.filter === modelData
               focusable: true
               onClicked: { root.filter = modelData; root.expandedId = ""; list.currentIndex = 0 }
@@ -222,7 +236,7 @@ Panel {
         Text {
           text: root.busy ? "Loading…" : root.visibleRows.length.toLocaleString(Qt.locale(), "f", 0)
           color: root.muted
-          font.family: Style.font.family
+          font.family: root.uiFont
           font.pixelSize: Style.font.caption
           Accessible.name: root.visibleRows.length + " results"
         }
@@ -234,11 +248,22 @@ Panel {
         text: root.issue
         textFormat: Text.PlainText
         color: root.foreground
-        font.family: Style.font.family
+        font.family: root.uiFont
         font.pixelSize: Style.font.caption
         wrapMode: Text.Wrap
         maximumLineCount: 3
         elide: Text.ElideRight
+      }
+
+      Text {
+        Layout.fillWidth: true
+        visible: root.tab === "plugins" && !!text
+        text: root.monitor ? root.monitor.actionError || "" : ""
+        textFormat: Text.PlainText
+        color: Color.urgent
+        font.family: root.uiFont
+        font.pixelSize: Style.font.bodySmall
+        wrapMode: Text.Wrap
       }
 
       PanelSeparator { Layout.fillWidth: true; foreground: root.foreground }
@@ -249,9 +274,21 @@ Panel {
         Layout.fillHeight: true
         Layout.minimumHeight: Style.space(60)
         clip: true
-        spacing: Style.space(3)
+        spacing: Style.space(8)
         model: root.visibleRows
         reuseItems: true
+        section.property: root.tab === "plugins" ? "group" : ""
+        section.delegate: Text {
+          required property string section
+          width: list.width
+          text: section
+          color: root.accent
+          font.family: root.uiFont
+          font.pixelSize: Style.font.bodySmall
+          font.bold: true
+          topPadding: Style.space(12)
+          bottomPadding: Style.space(8)
+        }
         boundsBehavior: Flickable.StopAtBounds
         keyNavigationEnabled: false
         QQC.ScrollBar.vertical: QQC.ScrollBar { policy: QQC.ScrollBar.AsNeeded }
@@ -269,61 +306,107 @@ Panel {
           readonly property bool expanded: root.expandedId === modelData.id
           readonly property bool selected: list.currentIndex === index && list.activeFocus
           width: list.width - Style.space(12)
-          height: contents.implicitHeight + Style.space(20)
-          color: selected || expanded ? Style.selectedFillFor(root.foreground, Color.accent)
-            : hit.containsMouse ? Style.hoverFillFor(root.foreground, Color.accent) : "transparent"
+          height: contents.implicitHeight + Style.space(24)
+          color: selected || expanded ? Qt.tint(root.surface, Qt.alpha(root.accent, 0.10))
+            : hit.containsMouse ? Qt.tint(root.surface, Qt.alpha(root.accent, 0.06)) : root.surface
           borderSpec: selected ? Border.controlSpec("focus", root.foreground, Color.accent) : Border.none()
-          radius: Style.cornerRadius
+          radius: Math.max(Style.space(6), Style.cornerRadius)
 
           Column {
             id: contents
             z: 1
-            x: Style.space(10)
-            y: Style.space(10)
-            width: parent.width - Style.space(20)
+            x: Style.space(12)
+            y: Style.space(12)
+            width: parent.width - Style.space(24)
             spacing: Style.space(5)
             RowLayout {
               width: parent.width
-              spacing: Style.space(10)
-              Text {
+              spacing: Style.space(12)
+              Rectangle {
+                Layout.preferredWidth: Style.space(34)
+                Layout.preferredHeight: Style.space(34)
+                Layout.alignment: Qt.AlignTop
+                radius: Math.max(Style.space(6), Style.cornerRadius)
+                color: Qt.alpha(root.accent, root.tab === "plugins" && !entry.modelData.enabled ? 0.07 : 0.16)
+                Text {
+                  anchors.centerIn: parent
+                  text: root.tab === "history" ? "󰋚" : root.tab === "packages" ? "󰏖" : "󰐱"
+                  color: root.accent
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.icon
+                }
+              }
+              ColumnLayout {
                 Layout.fillWidth: true
-                text: root.tab === "history" && entry.modelData.kind === "packages"
-                  ? entry.modelData.changes.length + (entry.modelData.changes.length === 1 ? " package change" : " package changes") : entry.modelData.name
-                textFormat: Text.PlainText
-                color: root.foreground
-                font.family: Style.font.family
-                font.pixelSize: Style.font.body
-                font.bold: true
-                elide: Text.ElideRight
+                spacing: Style.space(4)
+                Text {
+                  Layout.fillWidth: true
+                  text: root.tab === "history" && entry.modelData.kind === "packages"
+                    ? (entry.modelData.changes || []).length + " package changes" : entry.modelData.name || ""
+                  textFormat: Text.PlainText
+                  color: root.foreground
+                  font.family: root.uiFont
+                  font.pixelSize: Style.font.subtitle
+                  font.weight: Font.DemiBold
+                  elide: Text.ElideRight
+                }
+                Text {
+                  Layout.fillWidth: true
+                  text: Model.subtitle(entry.modelData, root.tab) || ""
+                  textFormat: Text.PlainText
+                  color: root.muted
+                  font.family: root.uiFont
+                  font.pixelSize: Style.font.bodySmall
+                  wrapMode: Text.Wrap
+                  maximumLineCount: 2
+                  elide: Text.ElideRight
+                }
+              }
+              Column {
+                visible: root.tab === "plugins"
+                Layout.alignment: Qt.AlignVCenter
+                spacing: Style.space(2)
+                PluginSwitch {
+                  id: pluginSwitch
+                  objectName: "toggle-" + entry.modelData.id
+                  readonly property string blockReason: Model.toggleBlock(entry.modelData)
+                  value: entry.modelData.enabled === true
+                  busy: !!root.monitor && !!root.monitor.pendingPlugin
+                  interactive: !blockReason
+                  explanation: blockReason || (value ? "Turn off " : "Turn on ") + entry.modelData.name
+                  Accessible.name: entry.modelData.name + ": " + (blockReason || (value ? "On" : "Off"))
+                  onRequested: if (root.monitor) root.monitor.setPluginEnabled(entry.modelData, !value)
+                }
+                Text {
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  text: root.monitor && root.monitor.pendingPlugin === entry.modelData.id ? "Saving…"
+                    : pluginSwitch.blockReason ? "Required" : entry.modelData.enabled ? "On" : "Off"
+                  color: entry.modelData.enabled ? root.accent : root.muted
+                  font.family: root.uiFont
+                  font.pixelSize: Style.font.caption
+                }
               }
               Text {
-                Layout.maximumWidth: contents.width * 0.38
-                text: root.tab === "packages" ? (entry.modelData.version || "")
-                  : root.tab === "discover" ? (entry.modelData.installed ? "Installed" : entry.modelData.installable ? "Available" : (entry.modelData.status || ""))
-                  : root.tab === "plugins" ? (entry.modelData.enabled ? "Enabled" : "Disabled")
-                  : entry.modelData.kind === "plugins" ? "Plugin" : "Packages"
+                visible: root.tab !== "plugins"
+                Layout.maximumWidth: Style.space(90)
+                text: root.tab === "packages" ? entry.modelData.version || ""
+                  : root.tab === "discover" ? (entry.modelData.installed ? "Installed" : entry.modelData.installable ? "Available" : entry.modelData.status || "") : ""
                 textFormat: Text.PlainText
-                color: root.muted
-                font.family: Style.font.family
+                color: root.accent
+                font.family: root.uiFont
                 font.pixelSize: Style.font.caption
-                elide: Text.ElideRight
+                wrapMode: Text.Wrap
               }
-              Text {
-                text: entry.expanded ? "⌃" : "⌄"
-                color: root.muted
-                font.family: Style.font.family
-                font.pixelSize: Style.font.body
+              Button {
+                fontFamily: root.uiFont
+                text: entry.expanded ? "−" : "···"
+                tooltipText: entry.expanded ? "Hide details" : "Details and actions"
+                Accessible.name: tooltipText + " for " + entry.modelData.name
+                foreground: root.muted
+                focusable: true
+                horizontalPadding: Style.space(6)
+                onClicked: { list.currentIndex = entry.index; root.activateRow() }
               }
-            }
-            Text {
-              width: parent.width
-              visible: !entry.expanded || root.tab === "history"
-              text: Model.subtitle(entry.modelData, root.tab)
-              textFormat: Text.PlainText
-              color: root.muted
-              font.family: Style.font.family
-              font.pixelSize: Style.font.caption
-              elide: Text.ElideRight
             }
             Text {
               width: parent.width
@@ -331,7 +414,7 @@ Panel {
               text: visible ? Model.details(entry.modelData, root.tab) : ""
               textFormat: Text.PlainText
               color: root.foreground
-              font.family: Style.font.family
+              font.family: root.uiFont
               font.pixelSize: Style.font.bodySmall
               wrapMode: Text.Wrap
               topPadding: Style.space(8)
@@ -342,7 +425,7 @@ Panel {
               text: [entry.modelData.critical ? "Critical" : "",
                 entry.modelData.bundled ? "Bundled with Omarchy" : root.tab === "plugins" ? "User installed" : ""].filter(Boolean).join(" · ")
               color: root.muted
-              font.family: Style.font.family
+              font.family: root.uiFont
               font.pixelSize: Style.font.caption
               wrapMode: Text.Wrap
             }
@@ -352,7 +435,7 @@ Panel {
               text: entry.modelData.removalBlock === undefined ? "Refresh inventory to check removal eligibility."
                 : entry.modelData.removalBlock || "Opens a terminal for review and confirmation."
               color: root.muted
-              font.family: Style.font.family
+              font.family: root.uiFont
               font.pixelSize: Style.font.caption
               wrapMode: Text.Wrap
             }
@@ -361,7 +444,7 @@ Panel {
               visible: entry.expanded && root.tab === "discover" && entry.modelData.installable && !entry.modelData.installed
               text: "Installs current upstream code, not a pinned verified snapshot."
               color: root.muted
-              font.family: Style.font.family
+              font.family: root.uiFont
               font.pixelSize: Style.font.caption
               wrapMode: Text.Wrap
             }
@@ -369,6 +452,7 @@ Panel {
               visible: entry.expanded && root.tab === "discover"
               spacing: Style.space(8)
               Button {
+            fontFamily: root.uiFont
                 text: entry.modelData.installed ? "Installed" : entry.modelData.installable ? "Install…" : "Unavailable"
                 enabled: entry.modelData.installable === true && !entry.modelData.installed && !root.issue
                 foreground: root.foreground
@@ -377,6 +461,7 @@ Panel {
                 onClicked: root.installItem(entry.modelData)
               }
               Button {
+            fontFamily: root.uiFont
                 text: "Source ↗"
                 enabled: !!entry.modelData.repo
                 foreground: root.foreground
@@ -385,6 +470,7 @@ Panel {
               }
             }
             Button {
+            fontFamily: root.uiFont
               visible: entry.expanded && (root.tab === "packages" || root.tab === "plugins")
               text: entry.modelData.removalBlock ? "Protected" : "Remove…"
               enabled: entry.modelData.removalBlock !== undefined && !entry.modelData.removalBlock
@@ -414,7 +500,7 @@ Panel {
           horizontalAlignment: Text.AlignHCenter
           wrapMode: Text.Wrap
           color: root.muted
-          font.family: Style.font.family
+          font.family: root.uiFont
           font.pixelSize: Style.font.body
         }
       }
@@ -428,7 +514,7 @@ Panel {
         textFormat: Text.PlainText
         wrapMode: Text.Wrap
         color: root.muted
-        font.family: Style.font.family
+        font.family: root.uiFont
         font.pixelSize: Style.font.caption
       }
     }
