@@ -4,7 +4,7 @@ A native Omarchy panel for installed packages, shell plugins, and recent changes
 
 This repository contains the current **1.1.0** community plugin, including its tests, screenshots, and known limitations. It is not an official Omarchy component or an accepted upstream contribution.
 
-![Omaplug package inventory](screenshots/packages-dark.png)
+![Omaplug plugin manager with visible switches](screenshots/plugins-ux-dark.png)
 
 ## Install
 
