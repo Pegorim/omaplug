@@ -12,6 +12,49 @@ Item {
   readonly property bool refreshing: collector.running
   readonly property string helperPath: decodeURIComponent(Qt.resolvedUrl("scripts/monitor.py").toString().replace(/^file:\/\//, ""))
 
+  property var marketplace: ({ plugins: [], checkedAt: null })
+  property string marketplaceError: ""
+  property bool marketplaceTimedOut: false
+  readonly property bool loadingMarketplace: catalogCollector.running
+  readonly property string marketplacePath: decodeURIComponent(Qt.resolvedUrl("scripts/marketplace.py").toString().replace(/^file:\/\//, ""))
+
+  function loadMarketplace(force) {
+    if (catalogCollector.running) return
+    if (!force && marketplace.checkedAt && Date.now() / 1000 - marketplace.checkedAt < 900) return
+    marketplaceError = ""
+    marketplaceTimedOut = false
+    catalogCollector.running = true
+    catalogWatchdog.restart()
+  }
+  Timer {
+    id: catalogWatchdog
+    interval: 30000
+    onTriggered: {
+      root.marketplaceTimedOut = true
+      root.marketplaceError = "Marketplace timed out. Check your connection and refresh to retry."
+      catalogCollector.running = false
+    }
+  }
+  Process {
+    id: catalogCollector
+    command: ["python3", root.marketplacePath, "catalog"]
+    stdout: StdioCollector { id: catalogOutput; waitForEnd: true }
+    stderr: StdioCollector { id: catalogErrors; waitForEnd: true }
+    onExited: function(exitCode) {
+      catalogWatchdog.stop()
+      if (root.marketplaceTimedOut) return
+      if (exitCode !== 0) {
+        root.marketplaceError = catalogErrors.text.trim() || "Marketplace unavailable. Refresh to retry."
+        return
+      }
+      try {
+        var value = JSON.parse(catalogOutput.text)
+        if (value.schemaVersion !== 1 || !Array.isArray(value.plugins)) throw new Error("Invalid marketplace response")
+        root.marketplace = value
+      } catch (exception) { root.marketplaceError = String(exception) }
+    }
+  }
+
   function refresh() {
     if (collector.running) return
     timedOut = false
@@ -63,11 +106,14 @@ Item {
   IpcHandler {
     target: "omaplug-monitor"
     function refresh(): void { root.refresh() }
+    function marketplaceRefresh(): void { root.loadMarketplace(true) }
     function status(): string {
       return JSON.stringify({ refreshing: root.refreshing, error: root.error,
         checkedAt: root.snapshot.checkedAt || null,
         packages: root.snapshot.packages.length, plugins: root.snapshot.plugins.length,
-        history: root.snapshot.history.length, errors: root.snapshot.errors })
+        history: root.snapshot.history.length, errors: root.snapshot.errors,
+        marketplacePlugins: root.marketplace.plugins.length, marketplaceError: root.marketplaceError,
+        loadingMarketplace: root.loadingMarketplace })
     }
   }
 }

@@ -14,6 +14,10 @@ function rows(snapshot, tab, filter, query) {
       if (filter === "Enabled") return item.enabled
       if (filter === "Disabled") return !item.enabled
       if (filter === "User") return !item.firstParty
+    } else if (tab === "discover") {
+      if (filter === "Installable") return item.installable && !item.installed
+      if (filter === "Installed") return item.installed
+      if (filter === "Verified") return item.verification === "Snapshot verified"
     } else if (filter !== "All") return item.kind === filter.toLowerCase()
     return true
   })
@@ -28,13 +32,25 @@ function changeText(change) {
   return change.name + " · " + change.action + (versions ? "\n" + versions : "")
 }
 
+function discover(catalog, installed) {
+  var ids = {}
+  installed.forEach(function(item) { ids[item.id] = true })
+  return (catalog.plugins || []).map(function(item) {
+    return Object.assign({}, item, { installed: Object.prototype.hasOwnProperty.call(ids, item.id) })
+  })
+}
+
 function subtitle(item, tab) {
+  if (tab === "discover") return item.category + " · " + item.author + " · " + item.verification
   if (tab === "packages") return item.description
   if (tab === "plugins") return (item.firstParty ? "Bundled" : "User installed") + " · " + item.kinds.join(", ")
   return date(item.at) + (item.kind === "plugins" ? " · Detected" : item.complete ? " · Completed" : " · Completion unconfirmed")
 }
 
 function details(item, tab) {
+  if (tab === "discover") return item.description + "\n\n" + item.id + " · " + item.version
+    + "\n" + item.repo + "\n" + item.verification
+    + (item.installNote ? "\n\n" + item.installNote : "")
   if (tab === "packages") return item.description + "\n\n" + item.version + " · " + item.architecture
     + "\n" + item.origin + " · " + (item.explicit ? "Explicitly installed" : "Dependency")
     + "\nInstalled size: " + item.size + "\nLast installed: " + item.installedAt

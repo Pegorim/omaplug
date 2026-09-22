@@ -1,8 +1,8 @@
 # Omaplug
 
-A native Omarchy panel for installed packages, shell plugins, and recent changes. Click the package icon in the bar to open it. Everything stays on your computer.
+A native Omarchy panel for installed packages, shell plugins, and recent changes, plus the official plugin marketplace. Click the package icon in the bar to open it. Inventory and history stay on your computer; Discover fetches the public Omarchy catalog.
 
-This repository contains the current **1.0.1** community plugin, including its tests, screenshots, and known limitations. It is not an official Omarchy component or an accepted upstream contribution.
+This repository contains the current **1.1.0** community plugin, including its tests, screenshots, and known limitations. It is not an official Omarchy component or an accepted upstream contribution.
 
 ![Omaplug package inventory](screenshots/packages-dark.png)
 
@@ -28,13 +28,24 @@ Verified with Omarchy **4.0.2-1**, Quickshell **0.3.1-1**, Python **3.14.7**, an
 
 - **Packages:** search names, descriptions, and versions. Filter by explicit packages, dependencies, or foreign packages. Expand a row for installed size and package metadata.
 - **Plugins:** inspect enabled status, bundled/user origin, manifest version, local revision, and source location. This includes Omarchy shell plugins, not editor or AI extensions.
+- **Discover:** search the official marketplace by name, author, category, or tags. Filter by installable, installed, or verified snapshots. Expand a plugin to install it or open its repository.
 - **History:** browse grouped package transactions and detected plugin changes. Expand a transaction for individual changes and old/new versions. The panel displays the most recent 500 entries; older recorded entries remain in SQLite.
 
 Foreign means absent from the currently available sync databases. Such packages can come from AUR or local package files. Repository classification does not prove the original installation source. Pacman's installation date describes the most recent install or upgrade, not necessarily the first install.
 
-Search receives focus when the panel opens. Use **Down/Up** to browse results, **Enter** or **Space** to expand, **Ctrl+F** to return to search, **Ctrl+1/2/3** to switch tabs, **Tab/Shift+Tab** to move between controls, and **Escape** to close. Click Refresh, or middle-click the bar icon, for a fresh observation.
+Search receives focus when the panel opens. Use **Down/Up** to browse results, **Enter** or **Space** to expand, **Ctrl+F** to return to search, **Ctrl+1/2/3/4** to switch tabs, **Tab/Shift+Tab** to move between controls, and **Escape** to close. Click Refresh, or middle-click the bar icon, for a fresh observation.
 
 ![Omaplug plugins](screenshots/plugins-dark.png)
+
+## Install from the marketplace
+
+Open **Discover** (Ctrl+4), search, expand a plugin, and choose **Install…**. Omaplug opens a terminal and hands off to `omarchy plugin add <repository> --enable`. Omarchy retains its review/confirmation, validation, duplicate-ID protection, and bar placement prompts. The inventory refreshes afterward. No plugin is installed simply by browsing.
+
+The catalog comes from `https://plugins.omarchy.org/catalog.json`, on demand when Discover opens, with a 15-minute in-memory freshness window. Refresh fetches it again. No inventory is uploaded. Failed requests retain the last loaded list and show an error; installation re-fetches the catalog and rechecks availability, repository identity, and the installed inventory before starting. Offline installation is not supported.
+
+All catalog entries can be browsed. Direct installation is available only for currently available root plugins with the marketplace's automatic-install flag. Manual-setup plugins, suites, multi-plugin repositories, and unavailable entries link to their upstream instructions instead. Bundled plugins are managed in the installed Plugins tab. Existing installations cannot be overwritten from Discover.
+
+Verification badges describe the marketplace snapshot; **Update unverified** is not treated as verified. Omarchy installs current upstream code, not a pinned verified commit. Omaplug constructs a fixed argument list from a validated GitHub repository URL and never runs catalog-provided command strings.
 
 ## What history can tell you
 

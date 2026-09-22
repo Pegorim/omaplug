@@ -39,3 +39,12 @@ The shared native Panel IPC handler registers once per output, producing the sam
 History is observational. Plugin changes between checks and activity while the monitor is disabled can be missed. Package history is limited by available logs; identical transactions within one timestamp can be indistinguishable. SQLite corruption is surfaced and preserved for manual recovery rather than repaired automatically.
 
 No upstream development-branch integration or submission was performed. Publication of this standalone repository does not constitute an upstream Omarchy contribution.
+
+## Marketplace feature — September 22, 2026
+
+- Version 1.1.0 adds Discover, backed by the official `plugins.omarchy.org/catalog.json` feed. The live fetch loaded 3,948 entries; 3,381 met automatic-install eligibility at the time of testing.
+- All 42 Python tests passed, including native command construction, rejected repository transports, manual/unavailable entries, duplicate IDs, installed-plugin blocking, repository-change checks, offline failure, and preservation of native confirmation. JavaScript inventory and Discover filter tests passed.
+- Omarchy's native manifest validator and `git diff --check` passed. Qt 6 lint reported dynamic shell QObject metadata and QProcess signal-type warnings, but no syntax errors.
+- The actual panel rendered Discover with the live catalog in an isolated Quickshell host. Inspected expanded installed-plugin state, including disabled installation. The running installed service loaded 3,948 entries with no inventory or marketplace errors after a shell restart.
+- No third-party plugin was installed for this check. Installer invocation and cancellation were tested with subprocess mocks; a complete real install remains untested.
+- Local runtime files were backed up before deployment. Existing removal and monitoring changes were preserved. This feature has not been published to GitHub or submitted to the marketplace.

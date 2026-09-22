@@ -25,6 +25,8 @@ with tempfile.TemporaryDirectory(prefix="omaplug-preview-") as temporary:
     (root / "plugin").symlink_to(project)
     (root / "shell.qml").write_text((project / "tests/Preview.qml").read_text())
     (root / "snapshot.json").write_text(json.dumps(snapshot))
+    catalog = os.environ.get("OMAPLUG_PREVIEW_CATALOG")
+    (root / "catalog.json").write_text(Path(catalog).read_text() if catalog else '{"plugins":[],"checkedAt":null}')
     print(f"Preview IPC: quickshell ipc -p {root} call preview <tab|expand|light|position|size|geometry|close>", flush=True)
     try:
         subprocess.run(["quickshell", "-p", str(root)], check=True)

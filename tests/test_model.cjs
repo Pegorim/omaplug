@@ -16,3 +16,13 @@ assert.equal(model.rows(snapshot, 'plugins', 'User', 'Notes').length, 1);
 assert.equal(model.rows(snapshot, 'packages', 'All', 'no-such-package').length, 0);
 assert.match(model.changeText({name:'example',action:'upgraded',old:'1',new:'2'}), /1 → 2/);
 console.log('Model filters and 10,000-package search passed');
+const discovered = model.discover({plugins:[
+  {id:'installed', name:'Existing', installable:true, verification:'Snapshot verified'},
+  {id:'new', name:'Fresh', installable:true, verification:'Update unverified'},
+  {id:'manual', name:'Manual', installable:false, verification:'Unverified'}
+]}, [{id:'installed'}]);
+assert.equal(model.rows({discover:discovered},'discover','Installable','').length,1);
+assert.equal(model.rows({discover:discovered},'discover','Installed','')[0].id,'installed');
+assert.equal(model.rows({discover:discovered},'discover','Verified','')[0].id,'installed');
+assert.equal(model.rows({discover:discovered},'discover','All','manual').length,1);
+console.log('Discover installed matching and filters passed');

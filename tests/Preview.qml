@@ -7,11 +7,16 @@ import "plugin" as Omaplug
 // Isolated visual harness. No real shell services or desktop theme changes.
 ShellRoot {
   FileView { id: data; path: Qt.resolvedUrl("snapshot.json"); blockLoading: true }
+  FileView { id: catalog; path: Qt.resolvedUrl("catalog.json"); blockLoading: true }
   Item {
     id: monitor
     property var snapshot: JSON.parse(data.text())
     property string error: ""
     property bool refreshing: false
+    property var marketplace: JSON.parse(catalog.text())
+    property string marketplaceError: ""
+    property bool loadingMarketplace: false
+    function loadMarketplace(force) {}
     function refresh() {}
   }
   QtObject {
@@ -100,7 +105,8 @@ ShellRoot {
     function expand(): void { preview.moveRow(0); preview.activateRow() }
     function inspect(kind: string, id: string): void {
       preview.selectTab(kind)
-      preview.visibleRows = monitor.snapshot[kind].filter(function(item) { return item.id === id })
+      preview.refreshRows()
+      preview.visibleRows = preview.visibleRows.filter(function(item) { return item.id === id })
       preview.expandedId = id
       preview.open()
     }
