@@ -41,14 +41,14 @@ function discover(catalog, installed) {
 }
 
 function subtitle(item, tab) {
-  if (tab === "discover") return item.category + " · " + item.author + " · " + item.verification
+  if (tab === "discover") return item.description || (item.category + " · " + item.author)
   if (tab === "packages") return item.description
-  if (tab === "plugins") return (item.firstParty ? "Bundled" : "User installed") + " · " + item.kinds.join(", ")
+  if (tab === "plugins") return item.description || ((item.firstParty ? "Bundled" : "User installed") + " · " + (item.kinds || []).join(", "))
   return date(item.at) + (item.kind === "plugins" ? " · Detected" : item.complete ? " · Completed" : " · Completion unconfirmed")
 }
 
 function details(item, tab) {
-  if (tab === "discover") return item.description + "\n\n" + item.id + " · " + item.version
+  if (tab === "discover") return item.description + "\n\n" + item.author + " · " + item.category + " · " + item.version
     + "\n" + item.repo + "\n" + item.verification
     + (item.installNote ? "\n\n" + item.installNote : "")
   if (tab === "packages") return item.description + "\n\n" + item.version + " · " + item.architecture
@@ -59,5 +59,5 @@ function details(item, tab) {
     + "\nVersion: " + item.version + (item.revision ? "\nRevision: " + item.revision.slice(0, 12) : "")
     + "\n" + (item.enabled ? "Enabled" : "Disabled") + " · " + (item.firstParty ? "Bundled" : "User installed")
     + "\n" + item.path + "\nInstallation date: unknown"
-  return item.changes.map(changeText).join("\n\n")
+  return (item.changes || []).map(changeText).join("\n\n")
 }

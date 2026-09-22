@@ -6,6 +6,7 @@ import "plugin" as Omaplug
 
 // Isolated visual harness. No real shell services or desktop theme changes.
 ShellRoot {
+  id: harness
   FileView { id: data; path: Qt.resolvedUrl("snapshot.json"); blockLoading: true }
   FileView { id: catalog; path: Qt.resolvedUrl("catalog.json"); blockLoading: true }
   Item {
@@ -101,6 +102,12 @@ ShellRoot {
         if ("cardOrigin" in item) { item.contentWidth = width; item.contentHeight = height }
       }
     }
+    function query(value: string): void { preview.searchText = value }
+    function state(): string {
+      return JSON.stringify({tab: preview.tab, query: preview.searchText,
+        filter: preview.filter, expanded: preview.expandedId, rows: preview.visibleRows.length})
+    }
+    function filter(value: string): void { preview.filter = value }
     function tab(value: string): void { preview.selectTab(value); preview.open() }
     function expand(): void { preview.moveRow(0); preview.activateRow() }
     function inspect(kind: string, id: string): void {

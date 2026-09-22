@@ -48,3 +48,11 @@ No upstream development-branch integration or submission was performed. Publicat
 - The actual panel rendered Discover with the live catalog in an isolated Quickshell host. Inspected expanded installed-plugin state, including disabled installation. The running installed service loaded 3,948 entries with no inventory or marketplace errors after a shell restart.
 - No third-party plugin was installed for this check. Installer invocation and cancellation were tested with subprocess mocks; a complete real install remains untested.
 - Local runtime files were backed up before deployment. Existing removal and monitoring changes were preserved. This feature has not been published to GitHub or submitted to the marketplace.
+
+## Simplified layout — September 22, 2026
+
+- Plugins is the initial view. Main navigation is Plugins / Discover / Packages, with History reduced to an H button on the far right. Ctrl+H toggles History and returns to the previous main view; the existing Ctrl+1/2/3/4 bindings remain unchanged.
+- Replaced the large inventory header and repeated result row with a compact title and one filter-adjacent count. Collapsed rows show descriptions; protection notices and technical details stay in expanded rows. Footer copy is shorter, with installation verification context next to the action.
+- Verified search and filter preservation through the live preview IPC: Plugins + `audio` + Enabled returned the same one result after visiting History. Exercised Ctrl+H in the real isolated panel and confirmed History → Plugins through IPC.
+- Inspected full-size Plugins and a 500 × 600 Discover layout. No clipped navigation or filters were observed. Captured `screenshots/plugins-redesigned.png`.
+- All 42 Python tests, JavaScript model tests, native manifest validation, and whitespace checks passed. The installed copy was backed up and updated, preserving existing backend behavior. No publication was performed.

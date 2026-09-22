@@ -26,6 +26,8 @@ Verified with Omarchy **4.0.2-1**, Quickshell **0.3.1-1**, Python **3.14.7**, an
 
 ## Browse your software
 
+Omaplug opens on **Plugins**. The three main views are **Plugins**, **Discover**, and **Packages**. The compact **H** button at the far right opens History; click it again or press **Ctrl+H** to return. Each view remembers its search, filter, expanded row, and selected position for the current shell session. A single result count sits beside the filters; descriptions stay visible, while technical details and removal actions appear only when expanded.
+
 - **Packages:** search names, descriptions, and versions. Filter by explicit packages, dependencies, or foreign packages. Expand a row for installed size and package metadata.
 - **Plugins:** inspect enabled status, bundled/user origin, manifest version, local revision, and source location. This includes Omarchy shell plugins, not editor or AI extensions.
 - **Discover:** search the official marketplace by name, author, category, or tags. Filter by installable, installed, or verified snapshots. Expand a plugin to install it or open its repository.
