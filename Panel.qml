@@ -3,12 +3,22 @@ import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 import qs.Ui
 import "Model.js" as Model
 
 Panel {
   id: root
+  FileView {
+    id: pluginManifest
+    path: Qt.resolvedUrl("manifest.json")
+    blockLoading: true
+    JsonAdapter {
+      property string name: "Omaplug"
+      property string version: ""
+    }
+  }
   moduleName: "mateus.omaplug"
   ipcTarget: "mateus.omaplug"
   readonly property var monitor: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
@@ -154,13 +164,25 @@ Panel {
           font.pixelSize: Style.font.icon
           font.family: Style.font.family
         }
-        Text {
+        ColumnLayout {
           Layout.fillWidth: true
-          text: "Omaplug"
-          color: root.foreground
-          font.family: root.uiFont
-          font.pixelSize: Style.font.subtitle * 1.3
-          font.bold: true
+          spacing: Style.space(2)
+          Text {
+            Layout.fillWidth: true
+            text: pluginManifest.adapter.name + " " + pluginManifest.adapter.version
+            color: root.foreground
+            font.family: root.uiFont
+            font.pixelSize: Style.font.subtitle * 1.3
+            font.bold: true
+          }
+          Text {
+            Layout.fillWidth: true
+            text: "Plugin Manager"
+            color: root.muted
+            font.family: root.uiFont
+            font.pixelSize: Style.font.bodySmall
+            elide: Text.ElideRight
+          }
         }
         Button {
             fontFamily: root.uiFont
