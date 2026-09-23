@@ -41,7 +41,7 @@ Foreign means absent from the currently available sync databases. Such packages 
 
 Search receives focus when the panel opens. Use **Down/Up** to browse results, **Enter** or **Space** to expand, **Ctrl+F** to return to search, **Ctrl+1/2/3/4** to switch tabs, **Tab/Shift+Tab** to move between controls, and **Escape** to close. Click Refresh, or middle-click the bar icon, for a fresh observation.
 
-![Omaplug plugins](screenshots/plugins-dark.png)
+![Omaplug plugin switches in a light palette](screenshots/plugins-ux-light.png)
 
 ## Install from the marketplace
 
@@ -74,7 +74,7 @@ Expand a package or plugin and choose **Remove…**. A terminal opens with Omarc
 
 Removal eligibility is checked again against current system data when the terminal opens. Missing safety data blocks removal. Package authentication uses Omarchy's askpass helper.
 
-![Expanded history in an isolated light palette](screenshots/history-light.png)
+![Recent changes in an isolated light palette](screenshots/history-light.png)
 
 ## State and diagnostics
 
