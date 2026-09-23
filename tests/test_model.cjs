@@ -35,3 +35,10 @@ assert.notEqual(model.toggleBlock({id:'mateus.omaplug',canDisable:true}), '');
 assert.notEqual(model.toggleBlock({id:'bar',canDisable:true,kinds:['bar']}), '');
 assert.equal(model.toggleBlock({id:'mine',canDisable:true,kinds:['service']}), '');
 console.log('Plugin grouping and toggle eligibility passed');
+
+const updateFixture = {repositories: {state: "ok", checkedAt: Date.now()/1000, items: [{id:"pkg", old:"1", new:"2", source:"Repository"}]}, aur: {state:"error", lastSuccess:{checkedAt:1,items:[{id:"aur",old:"1",new:"3",source:"AUR"}]}}};
+const updatedRows = model.withUpdates([{id:"pkg",version:"1"},{id:"aur",version:"1"},{id:"other",version:"1"}], updateFixture, "packages");
+assert.equal(model.rows({packages:updatedRows}, "packages", "Updates", "").length, 2);
+assert.equal(updatedRows[1].update.stale, true);
+assert.equal(model.updateSummary({state:"error"}, "Packages"), "Packages: Check failed");
+console.log("Independent update rows, stale results and errors passed");

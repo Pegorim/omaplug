@@ -14,12 +14,16 @@ Panel {
   readonly property var monitor: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
   readonly property var snapshot: monitor ? monitor.snapshot : ({ packages: [], plugins: [], history: [], errors: [] })
   readonly property var marketplace: monitor ? monitor.marketplace : ({ plugins: [], checkedAt: null })
+  readonly property var updates: monitor && monitor.updates ? monitor.updates : ({})
+  readonly property bool checkingUpdates: !!monitor && !!monitor.checkingUpdates
   readonly property bool busy: monitor && (tab === "discover" ? monitor.loadingMarketplace : monitor.refreshing)
   readonly property color foreground: Color.popups.text
   readonly property color muted: Qt.alpha(foreground, 0.78)
   readonly property string uiFont: "sans-serif"
   readonly property color accent: Color.accent
   readonly property color surface: Qt.tint(Color.popups.background, Qt.alpha(foreground, 0.035))
+  property double updateClock: Date.now() / 1000
+  Timer { interval: 60000; running: root.opened; repeat: true; onTriggered: { root.updateClock = Date.now() / 1000; root.refreshRows() } }
   property string tab: "plugins"
   property string previousTab: "plugins"
   property var viewState: ({})
@@ -28,8 +32,8 @@ Panel {
   property string filter: "All"
   property string expandedId: ""
   property var visibleRows: []
-  readonly property var filters: tab === "packages" ? ["All", "Explicit", "Dependencies", "Foreign"]
-    : tab === "plugins" ? ["All", "On", "Off", "Yours"]
+  readonly property var filters: tab === "packages" ? ["All", "Updates", "Explicit", "Dependencies", "Foreign"]
+    : tab === "plugins" ? ["All", "Updates", "On", "Off", "Yours"]
     : tab === "discover" ? ["All", "Installable", "Installed", "Verified"] : ["All", "Packages", "Plugins"]
   readonly property string issue: !monitor ? "Connecting to the software monitor…"
     : tab === "discover" ? monitor.marketplaceError : monitor.error || (snapshot.errors || []).map(function(e) { return e.message }).join("\n")
@@ -56,6 +60,11 @@ Panel {
     Quickshell.execDetached(["omarchy", "launch", "terminal", "python3", helper, "install", item.id, item.repo])
     root.close()
   }
+  function updateItem(kind, id) {
+    var helper = decodeURIComponent(Qt.resolvedUrl("scripts/updates.py").toString().replace(/^file:\/\//, ""))
+    Quickshell.execDetached(["omarchy", "launch", "terminal", "python3", helper, kind].concat(id ? [id] : []))
+    root.close()
+  }
   function refreshCurrent() {
     if (!monitor) return
     if (tab === "discover") monitor.loadMarketplace(true)
@@ -70,11 +79,13 @@ Panel {
   function refreshRows() {
     if (!search || !list || switchingTab) return
     var source = tab === "discover" ? { discover: Model.discover(marketplace, snapshot.plugins) }
-      : tab === "plugins" ? {plugins: Model.installedPlugins(snapshot.plugins)} : snapshot
+      : tab === "plugins" ? {plugins: Model.installedPlugins(Model.withUpdates(snapshot.plugins, updates, tab))}
+      : tab === "packages" ? {packages: Model.withUpdates(snapshot.packages, updates, tab)} : snapshot
     var next = Model.rows(source, tab, filter, search.text)
     // A freshness-only update must not reset the list or its scroll position.
     if (JSON.stringify(next) !== JSON.stringify(visibleRows)) visibleRows = next
   }
+  onUpdatesChanged: refreshRows()
   onSnapshotChanged: refreshRows()
   onMarketplaceChanged: refreshRows()
   onTabChanged: { refreshRows(); if (tab === "discover" && monitor) monitor.loadMarketplace(false) }
@@ -92,7 +103,7 @@ Panel {
   }
   onVisibleRowsChanged: { list.currentIndex = Math.min(Math.max(0, list.currentIndex), visibleRows.length - 1) }
   onOpenedChanged: if (opened) {
-    if (monitor) { monitor.refresh(); if (tab === "discover") monitor.loadMarketplace(false) }
+    if (monitor) { monitor.refresh(); if (monitor.checkUpdates) monitor.checkUpdates(false); if (tab === "discover") monitor.loadMarketplace(false) }
     Qt.callLater(function() { search.forceActiveFocus() })
   }
   implicitWidth: button.implicitWidth
@@ -160,6 +171,69 @@ Panel {
           iconSpinning: root.busy
           enabled: root.monitor && !root.busy
           onClicked: root.refreshCurrent()
+        }
+      }
+
+      Rectangle {
+        Layout.fillWidth: true
+        implicitHeight: updateStatus.implicitHeight + Style.space(16)
+        color: Qt.alpha(root.accent, 0.08)
+        radius: Style.space(6)
+        ColumnLayout {
+          id: updateStatus
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: parent.top
+          anchors.margins: Style.space(8)
+          spacing: Style.space(4)
+          Text {
+            Layout.fillWidth: true
+            text: "Omarchy " + (root.updates.omarchy && root.updates.omarchy.version || "version not checked")
+              + " · " + Model.updateSummary(root.updates.omarchy, "System", root.updateClock).replace("System: ", "")
+            textFormat: Text.PlainText
+            color: root.foreground
+            font.family: root.uiFont
+            font.pixelSize: Style.font.bodySmall
+            font.bold: true
+            wrapMode: Text.Wrap
+          }
+          Text {
+            Layout.fillWidth: true
+            text: Model.updateSummary(root.updates.repositories, "Packages", root.updateClock) + "  ·  " + Model.updateSummary(root.updates.aur, "AUR", root.updateClock)
+              + (root.updates.aur && root.updates.aur.unknown && root.updates.aur.unknown.length ? "  ·  " + root.updates.aur.unknown.length + " local/foreign not checked" : "")
+            color: root.accent
+            font.family: root.uiFont
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.Wrap
+          }
+          Flow {
+            Layout.fillWidth: true
+            Layout.preferredHeight: childrenRect.height
+            spacing: Style.space(8)
+            Button {
+              text: root.checkingUpdates ? "Checking…" : "Check updates"
+              tooltipText: Model.updateDetails(root.updates)
+              fontFamily: root.uiFont
+              fontSize: Style.font.caption
+              enabled: !!root.monitor && !root.checkingUpdates
+              focusable: true
+              onClicked: root.monitor.checkUpdates(true)
+            }
+            Button {
+              text: "Update system…"
+              fontFamily: root.uiFont
+              fontSize: Style.font.caption
+              tooltipText: "Full Omarchy workflow, including package updates. Opens a terminal for confirmation."
+              focusable: true
+              onClicked: root.updateItem("system", "")
+            }
+            Text {
+              text: root.monitor && root.monitor.updatesError || (root.updates.checkedAt ? "Checked " + Model.date(root.updates.checkedAt) : "Checks are on demand")
+              color: root.muted
+              font.family: root.uiFont
+              font.pixelSize: Style.font.caption
+            }
+          }
         }
       }
 
@@ -407,6 +481,26 @@ Panel {
                 horizontalPadding: Style.space(6)
                 onClicked: { list.currentIndex = entry.index; root.activateRow() }
               }
+            }
+            Text {
+              width: parent.width
+              visible: !!entry.modelData.update && (!entry.modelData.firstParty || entry.expanded)
+              text: !entry.modelData.update ? "" : root.tab === "packages"
+                ? entry.modelData.update.old + " → " + entry.modelData.update.new + " · " + entry.modelData.update.source + (entry.modelData.update.stale ? " · Last known (stale)" : "")
+                : entry.modelData.update.message + (entry.modelData.update.stale ? " · Stale" : "")
+              textFormat: Text.PlainText
+              color: root.accent
+              font.family: root.uiFont
+              font.pixelSize: Style.font.caption
+              wrapMode: Text.Wrap
+            }
+            Button {
+              visible: entry.expanded && root.tab === "plugins" && !!entry.modelData.update && entry.modelData.update.canUpdate === true
+              text: "Update plugin…"
+              fontFamily: root.uiFont
+              tooltipText: "Review upstream changes in Omarchy. Availability does not imply marketplace verification."
+              focusable: true
+              onClicked: root.updateItem("plugin", entry.modelData.id)
             }
             Text {
               width: parent.width

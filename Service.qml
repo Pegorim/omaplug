@@ -88,6 +88,31 @@ Item {
     }
   }
 
+  property var updates: ({})
+  property string updatesError: ""
+  readonly property bool checkingUpdates: updateCollector.running
+  readonly property string updatesPath: decodeURIComponent(Qt.resolvedUrl("scripts/updates.py").toString().replace(/^file:\/\//, ""))
+  function checkUpdates(force) {
+    if (updateCollector.running) return
+    if (!force && updates.checkedAt && Date.now() / 1000 - updates.checkedAt < 900) return
+    updatesError = ""
+    updateCollector.command = ["python3", updatesPath, "check"].concat(force ? ["--force"] : [])
+    updateCollector.running = true
+  }
+  Process {
+    id: updateCollector
+    stdout: StdioCollector { id: updateOutput; waitForEnd: true }
+    stderr: StdioCollector { id: updateErrors; waitForEnd: true }
+    onExited: function(exitCode) {
+      if (exitCode !== 0) { root.updatesError = updateErrors.text.trim() || "Update check failed"; return }
+      try {
+        var value = JSON.parse(updateOutput.text)
+        if (value.schemaVersion !== 1) throw new Error("Invalid update response")
+        root.updates = value
+      } catch (exception) { root.updatesError = String(exception) }
+    }
+  }
+
   function refresh() {
     if (collector.running) { refreshAgain = true; return }
     timedOut = false
@@ -145,9 +170,10 @@ Item {
   IpcHandler {
     target: "omaplug-monitor"
     function refresh(): void { root.refresh() }
+    function updatesRefresh(): void { root.checkUpdates(true); root.refresh() }
     function marketplaceRefresh(): void { root.loadMarketplace(true) }
     function status(): string {
-      return JSON.stringify({ refreshing: root.refreshing, error: root.error,
+      return JSON.stringify({ updates: root.updates, checkingUpdates: root.checkingUpdates, updatesError: root.updatesError, refreshing: root.refreshing, error: root.error,
         checkedAt: root.snapshot.checkedAt || null,
         packages: root.snapshot.packages.length, plugins: root.snapshot.plugins.length,
         history: root.snapshot.history.length, errors: root.snapshot.errors,

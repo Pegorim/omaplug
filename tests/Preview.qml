@@ -18,6 +18,7 @@ ShellRoot {
   }
   FileView { id: data; path: Qt.resolvedUrl("snapshot.json"); blockLoading: true }
   FileView { id: catalog; path: Qt.resolvedUrl("catalog.json"); blockLoading: true }
+  FileView { id: updateData; path: Qt.resolvedUrl("updates.json"); blockLoading: true }
   Item {
     id: monitor
     property var snapshot: JSON.parse(data.text())
@@ -29,6 +30,10 @@ ShellRoot {
       next.plugins = snapshot.plugins.map(function(p) { return p.id === item.id ? Object.assign({}, p, {enabled: enabled}) : p })
       snapshot = next
     }
+    property var updates: JSON.parse(updateData.text())
+    property bool checkingUpdates: false
+    property string updatesError: ""
+    function checkUpdates(force) {}
     property bool refreshing: false
     property var marketplace: JSON.parse(catalog.text())
     property string marketplaceError: ""

@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "id": "mateus.omaplug",
   "name": "Omaplug",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Mateus",
   "license": "MIT",
-  "description": "Installed software, change history, and the official Omarchy plugin marketplace.",
+  "description": "Plugin and package manager: discover plugins, manage installed software, check updates, and track changes.",
   "kinds": ["service", "bar-widget"],
   "entryPoints": {"service": "Service.qml", "barWidget": "Panel.qml"},
   "barWidget": {
     "displayName": "Omaplug",
-    "description": "Browse installed software and its history.",
+    "description": "Manage plugins, packages, updates, and change history.",
     "category": "System",
     "allowMultiple": false,
     "defaultSection": "center"

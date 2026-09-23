@@ -7,10 +7,12 @@ function rows(snapshot, tab, filter, query) {
   return items.filter(function(item) {
     if (!matches(item, query)) return false
     if (tab === "packages") {
+      if (filter === "Updates") return !!item.update
       if (filter === "Explicit") return item.explicit
       if (filter === "Dependencies") return !item.explicit
       if (filter === "Foreign") return item.origin === "Foreign"
     } else if (tab === "plugins") {
+      if (filter === "Updates") return item.update && item.update.state === "available"
       if ((filter === "Enabled" || filter === "On")) return item.enabled
       if ((filter === "Disabled" || filter === "Off")) return !item.enabled
       if ((filter === "User" || filter === "Yours")) return !item.firstParty
@@ -73,4 +75,33 @@ function toggleBlock(item) {
   if (item.id === "mateus.omaplug") return "Omaplug stays on while you manage plugins"
   if (item.canDisable !== true || (item.kinds || []).indexOf("bar") !== -1) return "Required by the shell"
   return ""
+}
+
+function withUpdates(items, updates, tab) {
+  var map = {}
+  var groups = tab === "packages" ? [updates.repositories, updates.aur] : [updates.plugins]
+  groups.forEach(function(group) {
+    if (!group) return
+    var data = group.state === "ok" ? group : group.lastSuccess
+    if (!data) return
+    var stale = group.state !== "ok" || Date.now() / 1000 - data.checkedAt >= 900
+    ;(data.items || []).forEach(function(item) { map[item.id] = Object.assign({}, item, {stale: stale}) })
+  })
+  return items.map(function(item) { return Object.assign({}, item, {update: map[item.id] || null}) })
+}
+function updateSummary(group, noun, now) {
+  if (!group) return noun + ": Not checked"
+  if (group.state !== "ok") return noun + ": Check failed"
+  var count = (group.items || []).length
+  return noun + ": " + (count ? count + " update" + (count === 1 ? "" : "s") : "Up to date")
+    + ((now || Date.now() / 1000) - group.checkedAt >= 900 ? " (stale)" : "")
+}
+
+function updateDetails(updates) {
+  return ["repositories", "aur", "omarchy", "plugins"].map(function(key) {
+    var g = updates[key]
+    if (!g) return key + ": Not checked"
+    var last = g.state === "ok" ? g.checkedAt : g.lastSuccess && g.lastSuccess.checkedAt
+    return key + ": " + (g.error || g.note || "Checked") + " · Last success: " + date(last)
+  }).join("\n")
 }

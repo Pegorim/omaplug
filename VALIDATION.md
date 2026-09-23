@@ -65,3 +65,14 @@ No upstream development-branch integration or submission was performed. Publicat
 - UI interaction test: focused the actual switch in an isolated preview and used Space to toggle simulated Market Pulse state off and back on. Verified the model response through IPC. This preview never changed the real Market Pulse plugin.
 - Inspected light and dark previews and a 500 × 600 layout. Saved `screenshots/plugins-ux-light.png` and `screenshots/plugins-ux-dark.png`. Palette overrides were confined to the preview process; desktop theme and font settings were unchanged.
 - Local runtime deployment preserves existing files via a timestamped backup and restarts the shell. GitHub and the marketplace remain unpublished.
+
+
+## Version 1.2.0, September 23, 2026
+
+- 59 Python tests and JavaScript model tests passed. New coverage includes independent Omarchy/package combinations, repository failure/no-update codes, AUR unknown packages and version comparison, dev checkout errors, modified/diverged plugin protection, cache TTL and repeated-failure retention, duplicate update actions, and native command handoff without auto-confirmation.
+- Live checks on Omarchy 4.0.4-1 found no Omarchy update, four repository package updates, four AUR release updates, and one unmatched foreign package. No system/package/plugin upgrades were performed during validation.
+- Installed copy backed up and updated. Shell restart was needed after a rescan retained the old compiled service. New service IPC confirmed update results with no inventory or update-collector errors.
+- Real panel checked in dark/light palettes and 500x600 layout. Refreshed screenshots include plugin switches, package updates, Discover, and History.
+- Native manifest validation and git diff whitespace checks passed.
+- Interactive update confirmation and cancellation handoff are unit-tested with mocked commands; a full live system upgrade or third-party plugin upgrade was intentionally not run.
+- Limits: AUR release versions only (no VCS rebuild detection); unknown foreign/local packages stay unchecked; plugin update checks support normal HTTPS GitHub-origin installations, not symlinked/dev checkouts; bulk actions and package installation remain out of scope.

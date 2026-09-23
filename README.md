@@ -1,10 +1,30 @@
-# Omaplug
+# Omaplug: Plugin & Package Manager
 
-A native Omarchy panel for installed packages, shell plugins, and recent changes, plus the official plugin marketplace. Click the package icon in the bar to open it. Inventory and history stay on your computer; Discover fetches the public Omarchy catalog.
+**Your plugins. Your packages. One clear panel.** Discover and install plugins, switch them on or off, inspect installed packages, check available updates, and track what changed, right from your Omarchy bar. Readable, theme-aware views keep everyday software management close at hand.
 
-This repository contains the current **1.1.0** community plugin, including its tests, screenshots, and known limitations. It is not an official Omarchy component or an accepted upstream contribution.
+This repository contains the current **1.2.0** community plugin, including its tests, screenshots, and known limitations. It is not an official Omarchy component or an accepted upstream contribution.
 
 ![Omaplug plugin manager with visible switches](screenshots/plugins-ux-dark.png)
+
+## What you can do
+
+- **Manage plugins:** visible On/Off switches, safe removal, and individual updates through Omarchy's review prompt.
+- **Discover plugins:** search the official marketplace and install eligible plugins without leaving the panel to find them.
+- **Manage installed packages:** search, inspect versions and metadata, filter available updates, and remove eligible software with confirmation.
+- **See independent updates:** installed Omarchy version, repository package updates, and AUR release updates. Package updates remain visible when Omarchy itself is up to date.
+- **Understand changes:** package transactions and detected plugin changes in the compact **H** history view.
+
+![Installed packages with available updates](screenshots/packages-dark.png)
+
+## Update checks
+
+Opening the panel checks updates if the cached result is older than 15 minutes. **Check updates** forces a fresh check. This is separate from the 30-second local inventory monitor. Repository checks use `checkupdates` and its isolated database, not a system database-only refresh. AUR release versions come from the public AUR RPC service; installed foreign-package names are sent to AUR for matching. Local inventory and history are not uploaded wholesale. VCS rebuilds are not detected, and foreign packages absent from AUR are labeled not checked.
+
+The header shows independent Omarchy, repository-package, and AUR statuses. **Packages → Updates** lists installed → available versions. Failed sources retain last-known rows marked stale; a failed check is never reported as up to date. Hover **Check updates** for source errors and last-success times.
+
+**Update system…** opens the full native `omarchy update` workflow, including package updates even when no new Omarchy version exists. It retains confirmation, authentication, the native update lock, and restart checks. It does not selectively upgrade individual packages. No update is installed by merely opening this panel.
+
+**Plugins → Updates** lists clean fast-forward updates. Checks fetch Git metadata from HTTPS GitHub origins without changing installed source. Modified, diverged, linked/development, non-Git and unsupported-origin installations show their limitations instead of an update button. **Update plugin…** rechecks eligibility and launches native interactive review; upstream changes are not a guarantee of marketplace verification. Bulk plugin updates and arbitrary package installation are not included.
 
 ## Install
 
@@ -22,7 +42,7 @@ Omarchy presents its normal review and confirmation prompts, validates the manif
 
 The `--enable` option adds Omaplug to your bar. Click its package icon to open the panel.
 
-Verified with Omarchy **4.0.2-1**, Quickshell **0.3.1-1**, Python **3.14.7**, and the native Omarchy shell components on the test machine. Older Waybar-based installations are not supported. Omaplug uses Python's standard library, pacman, pacman-conf, and Git for local plugin revisions.
+Verified with Omarchy **4.0.4-1**, Quickshell **0.3.1-1**, Python **3.14.7**, and the native Omarchy shell components on the test machine. Older Waybar-based installations are not supported. Omaplug uses Python's standard library, pacman, pacman-conf, vercmp, checkupdates (pacman-contrib), and Git. Missing check tools are reported as errors rather than an up-to-date status.
 
 ## Browse your software
 
@@ -52,6 +72,8 @@ The catalog comes from `https://plugins.omarchy.org/catalog.json`, on demand whe
 All catalog entries can be browsed. Direct installation is available only for currently available root plugins with the marketplace's automatic-install flag. Manual-setup plugins, suites, multi-plugin repositories, and unavailable entries link to their upstream instructions instead. Bundled plugins are managed in the installed Plugins tab. Existing installations cannot be overwritten from Discover.
 
 Verification badges describe the marketplace snapshot; **Update unverified** is not treated as verified. Omarchy installs current upstream code, not a pinned verified commit. Omaplug constructs a fixed argument list from a validated GitHub repository URL and never runs catalog-provided command strings.
+
+![Browse the official plugin marketplace](screenshots/discover-dark.png)
 
 ## What history can tell you
 
